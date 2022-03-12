@@ -33,7 +33,6 @@
 #include "exosite_meta.h"
 #include "drivers/exosite_hal_lwip.h"
 #include <string.h>
-//#include <inc/common.h>
 
 // external functions
 // externs
@@ -132,6 +131,10 @@ void exosite_meta_write(unsigned char * write_buffer, unsigned short srcBytes, u
       if (srcBytes > META_MFR_SIZE) return;
       exoHAL_WriteMetaItem(write_buffer, srcBytes, (int)meta_info->mfr); //store manufacturing info
       break;
+    case META_PID:
+      if (srcBytes > META_PID_SIZE) return;
+      exoHAL_WriteMetaItem(write_buffer, srcBytes, (int)meta_info->pid); //store PID info
+      break;
     case META_NONE:
     default:
       break;
@@ -139,6 +142,7 @@ void exosite_meta_write(unsigned char * write_buffer, unsigned short srcBytes, u
 
   return;
 }
+
 
 
 /*****************************************************************************
@@ -178,6 +182,10 @@ void exosite_meta_read(unsigned char * read_buffer, unsigned short destBytes, un
       if (destBytes < META_MFR_SIZE) return;
       exoHAL_ReadMetaItem(read_buffer, META_MFR_SIZE, (int)meta_info->mfr); //read manufacturing info
       break;
+    case META_PID:
+      if (destBytes < META_PID_SIZE) return;
+      exoHAL_ReadMetaItem(read_buffer, META_PID_SIZE, (int)meta_info->pid); //read PID info
+      break;
     case META_NONE:
     default:
       break;
@@ -185,5 +193,6 @@ void exosite_meta_read(unsigned char * read_buffer, unsigned short destBytes, un
 
   return;
 }
+
 
 

@@ -2,7 +2,7 @@
 //
 // bl_ssi.c - Functions used to transfer data via the SSI port.
 //
-// Copyright (c) 2006-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2006-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -63,22 +63,22 @@ SSISend(const uint8_t *pui8Data, uint32_t ui32Size)
         //
         // Wait until there is space in the SSI FIFO.
         //
-        while(!(HWREG(SSI0_BASE + SSI_O_SR) & SSI_SR_TNF))
+        while(!(HWREG(SSIx_BASE + SSI_O_SR) & SSI_SR_TNF))
         {
         }
 
         //
         // Write the next byte to the SSI port.
         //
-        HWREG(SSI0_BASE + SSI_O_DR) = *pui8Data++;
+        HWREG(SSIx_BASE + SSI_O_DR) = *pui8Data++;
     }
 
     //
     // Empty the receive FIFO.
     //
-    while(HWREG(SSI0_BASE + SSI_O_SR) & SSI_SR_RNE)
+    while(HWREG(SSIx_BASE + SSI_O_SR) & SSI_SR_RNE)
     {
-        HWREG(SSI0_BASE + SSI_O_DR);
+        HWREG(SSIx_BASE + SSI_O_DR);
     }
 }
 
@@ -98,14 +98,14 @@ SSIFlush(void)
     //
     // Wait until the transmit FIFO is empty.
     //
-    while(!(HWREG(SSI0_BASE + SSI_O_SR) & SSI_SR_TFE))
+    while(!(HWREG(SSIx_BASE + SSI_O_SR) & SSI_SR_TFE))
     {
     }
 
     //
     // Wait until the interface is not busy.
     //
-    while(HWREG(SSI0_BASE + SSI_O_SR) & SSI_SR_BSY)
+    while(HWREG(SSIx_BASE + SSI_O_SR) & SSI_SR_BSY)
     {
     }
 }
@@ -130,7 +130,7 @@ SSIReceive(uint8_t *pui8Data, uint32_t ui32Size)
     //
     // Ensure that we are sending out zeros so that we don't confuse the host.
     //
-    HWREG(SSI0_BASE + SSI_O_DR) = 0;
+    HWREG(SSIx_BASE + SSI_O_DR) = 0;
 
     //
     // Wait for the requested number of bytes.
@@ -140,15 +140,15 @@ SSIReceive(uint8_t *pui8Data, uint32_t ui32Size)
         //
         // Wait until there is data in the FIFO.
         //
-        while(!(HWREG(SSI0_BASE + SSI_O_SR) & SSI_SR_RNE))
+        while(!(HWREG(SSIx_BASE + SSI_O_SR) & SSI_SR_RNE))
         {
         }
 
         //
         // Read the next byte from the FIFO.
         //
-        *pui8Data++ = HWREG(SSI0_BASE + SSI_O_DR);
-        HWREG(SSI0_BASE + SSI_O_DR) = 0;
+        *pui8Data++ = HWREG(SSIx_BASE + SSI_O_DR);
+        HWREG(SSIx_BASE + SSI_O_DR) = 0;
     }
 }
 

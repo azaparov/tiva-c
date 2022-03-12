@@ -2,7 +2,7 @@
 //
 // bl_check.c - Code to check for a forced update.
 //
-// Copyright (c) 2006-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2006-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -77,7 +77,7 @@ CheckGPIOForceUpdate(void)
     //
     // Enable the required GPIO module.
     //
-    HWREG(SYSCTL_RCGC2) |= FORCED_UPDATE_PERIPH;
+    HWREG(SYSCTL_RCGCGPIO) |= FORCED_UPDATE_PERIPH;
 
     //
     // Wait a while before accessing the peripheral.

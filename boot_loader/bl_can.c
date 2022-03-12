@@ -2,7 +2,7 @@
 //
 // bl_can.c - Functions to transfer data via the CAN port.
 //
-// Copyright (c) 2008-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2008-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -63,6 +63,8 @@
 //*****************************************************************************
 #define CAN_RX_PIN_M            (1 << CAN_RX_PIN)
 #define CAN_TX_PIN_M            (1 << CAN_TX_PIN)
+#define CAN_RX_PIN_PCTL_M       (CAN_RX_PIN_PCTL << (CAN_RX_PIN*4))
+#define CAN_TX_PIN_PCTL_M       (CAN_TX_PIN_PCTL << (CAN_TX_PIN*4))
 
 //*****************************************************************************
 //
@@ -1238,21 +1240,22 @@ ConfigureBridge(void)
     //
     // Enable the GPIO module if necessary.
     //
-#if (CAN_RX_PERIPH != SYSCTL_RCGC2_GPIOA) && \
-    (CAN_TX_PERIPH != SYSCTL_RCGC2_GPIOA)
-    HWREG(SYSCTL_RCGC2) |= SYSCTL_RCGC2_GPIOA;
+#if (CAN_RX_PERIPH != SYSCTL_RCGCGPIO_R0) && \
+    (CAN_TX_PERIPH != SYSCTL_RCGCGPIO_R0)
+    HWREG(SYSCTL_RCGCGPIO) |= SYSCTL_RCGCGPIO_R0;
 #endif
 
     //
     // Enable the UART module.
     //
-    HWREG(SYSCTL_RCGC1) |= SYSCTL_RCGC1_UART0;
+    HWREG(SYSCTL_RCGCUART) |= SYSCTL_RCGCUART_R0;
 
     //
     // Enable the GPIO pins used for the UART.
     //
-    HWREG(GPIO_PORTA_BASE + GPIO_O_AFSEL) |= 0x3;
-    HWREG(GPIO_PORTA_BASE + GPIO_O_DEN) |= 0x03;
+    HWREG(GPIO_PORTA_BASE + GPIO_O_DEN)  |= UART_PINS;
+    HWREG(GPIO_PORTA_BASE + GPIO_O_PCTL) |= UART_PINS_PCTL;
+    HWREG(GPIO_PORTA_BASE + GPIO_O_DEN)  |= UART_PINS;
 
     //
     // Configure the UART.
@@ -1312,6 +1315,42 @@ void
 ConfigureCAN(void)
 {
 #ifdef CRYSTAL_FREQ
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+	defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
+
+    //
+    // Since the crystal frequency was specified, enable the main oscillator
+    // and clock the processor from it. Check for whether the Oscillator range
+    // has to be set and wait states need to be updated
+    //
+    if(CRYSTAL_FREQ >= 10000000)
+    {
+        HWREG(SYSCTL_MOSCCTL) |= (SYSCTL_MOSCCTL_OSCRNG);
+        HWREG(SYSCTL_MOSCCTL) &= ~(SYSCTL_MOSCCTL_PWRDN | SYSCTL_MOSCCTL_NOXTAL);
+    }
+    else
+    {
+        HWREG(SYSCTL_MOSCCTL) &= ~(SYSCTL_MOSCCTL_PWRDN | SYSCTL_MOSCCTL_NOXTAL);
+    }
+
+    //
+    // Wait for the Oscillator to Stabilize
+    //
+    Delay(524288);
+
+    if(CRYSTAL_FREQ > 16000000)
+    {
+    	HWREG(SYSCTL_MEMTIM0)  = (SYSCTL_MEMTIM0_FBCHT_1_5 | (1 << SYSCTL_MEMTIM0_FWS_S) |
+                				  SYSCTL_MEMTIM0_EBCHT_1_5 | (1 << SYSCTL_MEMTIM0_EWS_S) |
+                				  SYSCTL_MEMTIM0_MB1);
+    	HWREG(SYSCTL_RSCLKCFG) = (SYSCTL_RSCLKCFG_MEMTIMU | SYSCTL_RSCLKCFG_OSCSRC_MOSC);
+    }
+    else
+    {
+    	HWREG(SYSCTL_RSCLKCFG) = (SYSCTL_RSCLKCFG_OSCSRC_MOSC);
+    }
+#else
     //
     // Since the crystal frequency was specified, enable the main oscillator
     // and clock the processor from it.
@@ -1330,17 +1369,18 @@ ConfigureCAN(void)
                           ~(SYSCTL_RCC_XTAL_M | SYSCTL_RCC_OSCSRC_M)) |
                          XTAL_VALUE | SYSCTL_RCC_OSCSRC_MAIN);
 #endif
+#endif
 
     //
     // Enable the CAN controller.
     //
-    HWREG(SYSCTL_RCGC0) |= SYSCTL_RCGC0_CAN0;
+    HWREG(SYSCTL_RCGCCAN) |= SYSCTL_RCGCCAN_R0;
 
 #if CAN_RX_PERIPH == CAN_TX_PERIPH
     //
     // Enable the GPIO associated with CAN0
     //
-    HWREG(SYSCTL_RCGC2) |= CAN_RX_PERIPH;
+    HWREG(SYSCTL_RCGCGPIO) |= CAN_RX_PERIPH;
 
     //
     // Wait a while before accessing the peripheral.
@@ -1353,6 +1393,11 @@ ConfigureCAN(void)
     HWREG(CAN_RX_PORT + GPIO_O_AFSEL) |= CAN_RX_PIN_M | CAN_TX_PIN_M;
 
     //
+    // Set the port control selects.
+    //
+    HWREG(CAN_RX_PORT + GPIO_O_PCTL) |= CAN_RX_PIN_PCTL_M | CAN_TX_PIN_PCTL_M;
+
+    //
     // Set the pin type to it's digital function.
     //
     HWREG(CAN_RX_PORT + GPIO_O_DEN) |= CAN_RX_PIN_M | CAN_TX_PIN_M;
@@ -1361,7 +1406,7 @@ ConfigureCAN(void)
     //
     // Enable the GPIO associated with CAN0
     //
-    HWREG(SYSCTL_RCGC2) |= CAN_RX_PERIPH | CAN_TX_PERIPH;
+    HWREG(SYSCTL_RCGCGPIO) |= CAN_RX_PERIPH | CAN_TX_PERIPH;
 
     //
     // Wait a while before accessing the peripheral.
@@ -1373,6 +1418,12 @@ ConfigureCAN(void)
     //
     HWREG(CAN_RX_PORT + GPIO_O_AFSEL) |= CAN_RX_PIN_M;
     HWREG(CAN_TX_PORT + GPIO_O_AFSEL) |= CAN_TX_PIN_M;
+
+    //
+    // Set the port control selects.
+    //
+    HWREG(CAN_RX_PORT + GPIO_O_PCTL) |= CAN_RX_PIN_PCTL_M;
+    HWREG(CAN_TX_PORT + GPIO_O_PCTL) |= CAN_TX_PIN_PCTL_M;
 
     //
     // Set the pin type to it's digital function.

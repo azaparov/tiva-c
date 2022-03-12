@@ -2,7 +2,7 @@
 //
 // bl_emac.c - Functions to update via Ethernet.
 //
-// Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2013-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -65,6 +65,22 @@
                    uint8_t ui8Pins,                                           \
                    uint32_t ui32Strength,                                     \
                    uint32_t ui32PadType))ROM_GPIOTABLE[5])
+#endif
+
+//
+// Define ROM_EMACInit for the bootloader of Snowflake RA0.  This function is
+// deprecated in RA0 ROM, as it does not disable some interrupts that are not
+// cleared by ***_EMACIntClear().  But that is not a problem for the bootloader
+// as we are not enabling any interrupts.
+//
+#if defined(TARGET_IS_TM4C129_RA0)
+#define ROM_EMACInit                                                          \
+        ((void (*)(uint32_t ui32Base,                                         \
+                   uint32_t ui32SysClk,                                       \
+                   uint32_t ui32BusConfig,                                    \
+                   uint32_t ui32RxBurst,                                      \
+                   uint32_t ui32TxBurst,                                      \
+                   uint32_t ui32DescSkipSize))ROM_EMACTABLE[8])
 #endif
 
 #include "driverlib/rom_map.h"
@@ -903,7 +919,7 @@ SendTFTPGet(void)
 //! Parses a packet checking for a TFTP data packet.
 //!
 //! This function parses a packet to determine if it is a TFTP data packet for
-//! out current TFTP transfer.  If a valid packet is found, the contents of the
+//! a current TFTP transfer.  If a valid packet is found, the contents of the
 //! packet are programmed into flash.
 //!
 //! \return Returns 1 if this packet was the last packet of the TFTP data

@@ -3,7 +3,7 @@
 // bl_crystal.h - Macros to convert a CRYSTAL_FREQ value into the appropriate
 //                RCC XTAL field define.
 //
-// Copyright (c) 2010-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2010-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -19,7 +19,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -29,7 +29,8 @@
 //*****************************************************************************
 //
 // Convert the CRYSTAL_FREQ value into the corresponding SYSCTL_RCC_XTAL_???
-// value.
+// value for TM4C123 device. For TM4C129 device the CRYSTAL_FREQ is converted to
+// M and N values for the PLL.
 //
 //*****************************************************************************
 #if CRYSTAL_FREQ == 3579545
@@ -44,22 +45,32 @@
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_4_91MHZ
 #elif CRYSTAL_FREQ == 5000000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_5MHZ
+#define PLL_M_TO_REG            96
+#define PLL_N_TO_REG            0
 #elif CRYSTAL_FREQ == 5120000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_5_12MHZ
 #elif CRYSTAL_FREQ == 6000000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_6MHZ
+#define PLL_M_TO_REG            80
+#define PLL_N_TO_REG            0
 #elif CRYSTAL_FREQ == 6144000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_6_14MHZ
 #elif CRYSTAL_FREQ == 7372800
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_7_37MHZ
 #elif CRYSTAL_FREQ == 8000000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_8MHZ
+#define PLL_M_TO_REG            60
+#define PLL_N_TO_REG            0
 #elif CRYSTAL_FREQ == 8192000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_8_19MHZ
 #elif CRYSTAL_FREQ == 10000000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_10MHZ
+#define PLL_M_TO_REG            48
+#define PLL_N_TO_REG            0
 #elif CRYSTAL_FREQ == 12000000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_12MHZ
+#define PLL_M_TO_REG            40
+#define PLL_N_TO_REG            0
 #elif CRYSTAL_FREQ == 12288000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_12_2MHZ
 #elif CRYSTAL_FREQ == 13560000
@@ -68,10 +79,14 @@
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_14_3MHZ
 #elif CRYSTAL_FREQ == 16000000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_16MHZ
+#define PLL_M_TO_REG            30
+#define PLL_N_TO_REG            0
 #elif CRYSTAL_FREQ == 16384000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_16_3MHZ
 #elif CRYSTAL_FREQ == 25000000
 #define XTAL_VALUE              SYSCTL_RCC_XTAL_25MHZ
+#define PLL_M_TO_REG            96
+#define PLL_N_TO_REG            4
 #else
 #error ERROR: Unknown CRYSTAL_FREQ value specified!
 #endif

@@ -7,8 +7,8 @@
 
 /*
  * This file was modified from a sample available from the FatFs
- * web site. It was modified to work with an EK-TM4C129EXL evaluation
- * board.
+ * web site. It was modified to work with an EK-TM4C1294XL and EK-TM4C129EXL
+ * evaluation boards.
  */
 
 #include <stdint.h>
@@ -16,6 +16,7 @@
 #include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
 #include "driverlib/gpio.h"
+#include "driverlib/pin_map.h"
 #include "driverlib/rom.h"
 #include "driverlib/rom_map.h"
 #include "driverlib/ssi.h"
@@ -39,24 +40,55 @@
 #define CMD55    (0x40+55)    /* APP_CMD */
 #define CMD58    (0x40+58)    /* READ_OCR */
 
-/* Peripheral definitions for EK-TM4C129EXL board */
+#if defined(EK_TM4C129_BP1)
+/* Peripheral definitions for EK-TM4C1294XL and EK-TM4C129EXL boards */
 /* SSI port */
-#define SDC_SSI_BASE            SSI3_BASE
-#define SDC_SSI_SYSCTL_PERIPH   SYSCTL_PERIPH_SSI3
+#define SDC_SSI_BASE            SSI2_BASE
+#define SDC_SSI_SYSCTL_PERIPH   SYSCTL_PERIPH_SSI2
 
 /* GPIO for SSI pins */
 /* CLK pin */
-#define SDC_SSI_CLK_GPIO_PORT_BASE   GPIO_PORTQ_BASE
-#define SDC_SSI_CLK             GPIO_PIN_0
+#define SDC_SSI_CLK_SYSCTL_PERIPH    SYSCTL_PERIPH_GPIOD
+#define SDC_SSI_CLK_GPIO_PORT_BASE   GPIO_PORTD_BASE
+#define SDC_SSI_CLK             GPIO_PIN_3
 /* TX pin */
-#define SDC_SSI_TX_GPIO_PORT_BASE   GPIO_PORTF_BASE
-#define SDC_SSI_TX              GPIO_PIN_0
+#define SDC_SSI_TX_SYSCTL_PERIPH    SYSCTL_PERIPH_GPIOD
+#define SDC_SSI_TX_GPIO_PORT_BASE   GPIO_PORTD_BASE
+#define SDC_SSI_TX              GPIO_PIN_1
 /* RX pin */
-#define SDC_SSI_RX_GPIO_PORT_BASE   GPIO_PORTQ_BASE
-#define SDC_SSI_RX              GPIO_PIN_2
+#define SDC_SSI_RX_SYSCTL_PERIPH    SYSCTL_PERIPH_GPIOD
+#define SDC_SSI_RX_GPIO_PORT_BASE   GPIO_PORTD_BASE
+#define SDC_SSI_RX              GPIO_PIN_0
 /* CS pin */
+#define SDC_SSI_FSS_SYSCTL_PERIPH    SYSCTL_PERIPH_GPIOH
 #define SDC_SSI_FSS_GPIO_PORT_BASE   GPIO_PORTH_BASE
-#define SDC_SSI_FSS             GPIO_PIN_4
+#define SDC_SSI_FSS             GPIO_PIN_2
+#elif defined(EK_TM4C129_BP2)
+/* Peripheral definitions for EK-TM4C1294XL and EK-TM4C129EXL boards */
+/* SSI port */
+#define SDC_SSI_BASE            SSI0_BASE
+#define SDC_SSI_SYSCTL_PERIPH   SYSCTL_PERIPH_SSI0
+
+/* GPIO for SSI pins */
+/* CLK pin */
+#define SDC_SSI_CLK_SYSCTL_PERIPH    SYSCTL_PERIPH_GPIOA
+#define SDC_SSI_CLK_GPIO_PORT_BASE   GPIO_PORTA_BASE
+#define SDC_SSI_CLK             GPIO_PIN_2
+/* TX pin */
+#define SDC_SSI_TX_SYSCTL_PERIPH    SYSCTL_PERIPH_GPIOA
+#define SDC_SSI_TX_GPIO_PORT_BASE   GPIO_PORTA_BASE
+#define SDC_SSI_TX              GPIO_PIN_4
+/* RX pin */
+#define SDC_SSI_RX_SYSCTL_PERIPH    SYSCTL_PERIPH_GPIOA
+#define SDC_SSI_RX_GPIO_PORT_BASE   GPIO_PORTA_BASE
+#define SDC_SSI_RX              GPIO_PIN_5
+/* CS pin */
+#define SDC_SSI_FSS_SYSCTL_PERIPH    SYSCTL_PERIPH_GPIOP
+#define SDC_SSI_FSS_GPIO_PORT_BASE   GPIO_PORTP_BASE
+#define SDC_SSI_FSS             GPIO_PIN_5
+#else
+#error ERROR: Booster Pack Header not defined!
+#endif
 
 /* must be supplied by the application */
 extern uint32_t g_ui32SysClock;
@@ -199,15 +231,26 @@ void power_on (void)
 
     /* Enable the peripherals used to drive the SDC on SSI */
     ROM_SysCtlPeripheralEnable(SDC_SSI_SYSCTL_PERIPH);
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOQ);
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOH);
+    ROM_SysCtlPeripheralEnable(SDC_SSI_CLK_SYSCTL_PERIPH);
+    ROM_SysCtlPeripheralEnable(SDC_SSI_TX_SYSCTL_PERIPH);
+    ROM_SysCtlPeripheralEnable(SDC_SSI_RX_SYSCTL_PERIPH);
+    ROM_SysCtlPeripheralEnable(SDC_SSI_FSS_SYSCTL_PERIPH);
 
     /*
      * Configure the appropriate pins to be SSI instead of GPIO. The FSS (CS)
      * signal is directly driven to ensure that we can hold it low through a
      * complete transaction with the SD card.
      */
+#ifdef EK_TM4C129_BP1
+    GPIOPinConfigure(GPIO_PD3_SSI2CLK);
+    GPIOPinConfigure(GPIO_PD1_SSI2XDAT0);
+    GPIOPinConfigure(GPIO_PD0_SSI2XDAT1);
+#endif
+#ifdef EK_TM4C129_BP2
+    GPIOPinConfigure(GPIO_PA2_SSI0CLK);
+    GPIOPinConfigure(GPIO_PA4_SSI0XDAT0);
+    GPIOPinConfigure(GPIO_PA5_SSI0XDAT1);
+#endif
     ROM_GPIOPinTypeSSI(SDC_SSI_TX_GPIO_PORT_BASE, SDC_SSI_TX);
     ROM_GPIOPinTypeSSI(SDC_SSI_RX_GPIO_PORT_BASE, SDC_SSI_RX);
     ROM_GPIOPinTypeSSI(SDC_SSI_CLK_GPIO_PORT_BASE, SDC_SSI_CLK);
@@ -226,7 +269,7 @@ void power_on (void)
     MAP_GPIOPadConfigSet(SDC_SSI_FSS_GPIO_PORT_BASE, SDC_SSI_FSS,
                          GPIO_STRENGTH_4MA, GPIO_PIN_TYPE_STD);
 
-    /* Configure the SSI3 port */
+    /* Configure the SSI1 port */
     ROM_SSIConfigSetExpClk(SDC_SSI_BASE, g_ui32SysClock,
                            SSI_FRF_MOTO_MODE_0, SSI_MODE_MASTER, 400000, 8);
     ROM_SSIEnable(SDC_SSI_BASE);

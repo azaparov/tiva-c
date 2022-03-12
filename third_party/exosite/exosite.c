@@ -3,28 +3,28 @@
 * exosite.c - Exosite cloud communications.
 * Copyright (c) 2013, Exosite LLC
 * All rights reserved.
-* 
-* Redistribution and use in source and binary forms, with or without 
+*
+* Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are met:
-* 
+*
 *     * Redistributions of source code must retain the above copyright notice,
 *       this list of conditions and the following disclaimer.
-*     * Redistributions in binary form must reproduce the above copyright 
+*     * Redistributions in binary form must reproduce the above copyright
 *       notice, this list of conditions and the following disclaimer in the
 *       documentation and/or other materials provided with the distribution.
 *     * Neither the name of Exosite LLC nor the names of its contributors may
-*       be used to endorse or promote products derived from this software 
+*       be used to endorse or promote products derived from this software
 *       without specific prior written permission.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
-* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
 * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
-* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
 *
@@ -32,13 +32,11 @@
 
 #include "drivers/exosite_hal_lwip.h"
 #include "exosite_meta.h"
-
 #include <string.h>
-//#include <apps/apps.h>
 #include "exosite.h"
-//#include <inc/common.h>
-
 #include "utils/ustdlib.h"
+#include "utils/uartstdio.h"
+#include <stdio.h>
 
 // ITOA added by Tiva C group. This C library function may not exist in our standard
 // development environment for every toolchain.
@@ -52,7 +50,7 @@
 
 //local defines
 #define EXOSITE_MAX_CONNECT_RETRY_COUNT 5
-#define EXOSITE_LENGTH EXOSITE_SN_MAXLENGTH + EXOSITE_MODEL_MAXLENGTH + EXOSITE_VENDOR_MAXLENGTH
+#define EXOSITE_LENGTH EXOSITE_SN_MAXLENGTH
 #define RX_SIZE 50
 #define CIK_LENGTH 40
 #define MAC_LEN 6
@@ -73,17 +71,16 @@ enum lineTypes
 #define STR_CIK_HEADER "X-Exosite-CIK: "
 #define STR_CONTENT_LENGTH "Content-Length: "
 #define STR_GET_URL "GET /onep:v1/stack/alias?"
-#define STR_HTTP "  HTTP/1.1\r\n"
-#define STR_HOST "Host: m2.exosite.com\r\n"
+#define STR_HTTP " HTTP/1.1\r\n"
+#define STR_HOST_HEADER "Host: "
+#define STR_HOST "devmode-m2.exosite.io\r\n"
 #define STR_ACCEPT "Accept: application/x-www-form-urlencoded; charset=utf-8\r\n"
 #define STR_CONTENT "Content-Type: application/x-www-form-urlencoded; charset=utf-8\r\n"
-#define STR_VENDOR "vendor="
-#define STR_MODEL "model="
-#define STR_SN "sn="
+#define STR_ID "id="
 #define STR_CRLF "\r\n"
 
 // local functions
-int info_assemble(const char * vendor, const char *model, const char *sn);
+int info_assemble(const char *sn); //info_assemble(const char * vendor, const char *model, const char *sn);
 int init_UUID(unsigned char if_nbr);
 void update_m2ip(void);
 int get_http_status(long socket);
@@ -93,7 +90,7 @@ void sendLine(long socket, unsigned char LINE, const char * payload);
 // global functions
 int Exosite_Write(char * pbuf, unsigned int bufsize);
 int Exosite_Read(char * palias, char * pbuf, unsigned int buflen);
-int Exosite_Init(const char *vendor, const char *model, const unsigned char if_nbr, int reset);
+int Exosite_Init(const unsigned char if_nbr, int reset); //Exosite_Init(const char *vendor, const char *model, const unsigned char if_nbr, int reset);
 int Exosite_Activate(void);
 void Exosite_SetCIK(char * pCIK);
 int Exosite_GetCIK(char * pCIK);
@@ -105,6 +102,8 @@ int Exosite_StatusCode(void);
 // global variables
 static int status_code = 0;
 static int exosite_initialized = 0;
+
+char g_pcExositeAddr[70];
 
 
 /*****************************************************************************
@@ -121,48 +120,19 @@ static int exosite_initialized = 0;
 *
 *****************************************************************************/
 int
-info_assemble(const char * vendor, const char *model, const char *sn)
+info_assemble(const char *sn)
 {
   int info_len = 0;
   int assemble_len = 0;
   char * vendor_info = exosite_provision_info;
 
-  // verify the assembly length
-  assemble_len = strlen(STR_VENDOR) + strlen(vendor)
-                 + strlen(STR_MODEL) + strlen(model)
-                 + strlen(STR_SN) + 3;
+  assemble_len = strlen(STR_ID) + 3;
   if (assemble_len > 95)
     return info_len;
 
-  // vendor=
-  memcpy(vendor_info, STR_VENDOR, strlen(STR_VENDOR));
-  info_len = strlen(STR_VENDOR);
+  memcpy(&vendor_info[info_len], STR_ID, strlen(STR_ID));
+  info_len += strlen(STR_ID);
 
-  // vendor="custom's vendor"
-  memcpy(&vendor_info[info_len], vendor, strlen(vendor));
-  info_len += strlen(vendor);
-
-  // vendor="custom's vendor"&
-  vendor_info[info_len] = '&'; // &
-  info_len += 1;
-
-  // vendor="custom's vendor"&model=
-  memcpy(&vendor_info[info_len], STR_MODEL, strlen(STR_MODEL));
-  info_len += strlen(STR_MODEL);
-
-  // vendor="custom's vendor"&model="custom's model"
-  memcpy(&vendor_info[info_len], model, strlen(model));
-  info_len += strlen(model);
-
-  // vendor="custom's vendor"&model="custom's model"&
-  vendor_info[info_len] = '&'; // &
-  info_len += 1;
-
-  // vendor="custom's vendor"&model="custom's model"&sn=
-  memcpy(&vendor_info[info_len], STR_SN, strlen(STR_SN));
-  info_len += strlen(STR_SN);
-
-  // vendor="custom's vendor"&model="custom's model"&sn="device's sn"
   memcpy(&vendor_info[info_len], sn, strlen(sn));
   info_len += strlen(sn);
 
@@ -204,7 +174,7 @@ Exosite_StatusCode(void)
 *
 *****************************************************************************/
 int
-Exosite_Init(const char *vendor, const char *model, const unsigned char if_nbr, int reset)
+Exosite_Init(const unsigned char if_nbr, int reset)
 {
   char struuid[EXOSITE_SN_MAXLENGTH];
   unsigned char uuid_len = 0;
@@ -217,27 +187,18 @@ Exosite_Init(const char *vendor, const char *model, const unsigned char if_nbr, 
     status_code = EXO_STATUS_BAD_UUID;
     return 0;
   }
-  if (strlen(vendor) > EXOSITE_VENDOR_MAXLENGTH)
-  {
-    status_code = EXO_STATUS_BAD_VENDOR;
-    return 0;
-  }
-  if (strlen(model) > EXOSITE_MODEL_MAXLENGTH)
-  {
-    status_code = EXO_STATUS_BAD_MODEL;
-    return 0;
-  }
 
   exosite_meta_write((unsigned char *)struuid, uuid_len, META_UUID);
 
   // read UUID into 'sn'
-  info_assemble(vendor, model, struuid);
+  info_assemble(struuid);
 
   exosite_initialized = 1;
 
   status_code = EXO_STATUS_OK;
 
   return 1;
+
 }
 
 
@@ -260,7 +221,7 @@ Exosite_Activate(void)
   int length;
   char strLen[5];
  // char cmp_ss[18] = "Content-Length: 40";
-  char *cmp_ss = "Content-Length: 40";
+  char *cmp_ss = "content-length: 40"; // THIS LINE CHANGED TO LOWER CASING TO ACCOUNT FOR MURANO'S RESPONSE
   char *cmp = cmp_ss;
   int newcik = 0;
   int http_status = 0;
@@ -394,6 +355,25 @@ Exosite_SetCIK(char * pCIK)
   return;
 }
 
+/*****************************************************************************
+*
+* Exosite_SetPID
+*
+*  \param  pointer to PID
+*
+*  \return None
+*
+*  \brief  Programs a new PID to flash / non volatile
+*
+*****************************************************************************/
+void
+Exosite_SetPID(char * pPID)
+{
+  exosite_meta_write((unsigned char *)pPID, EXOSITE_PID_LENGTH, META_PID);
+  status_code = EXO_STATUS_OK;
+  return;
+}
+
 
 /*****************************************************************************
 *
@@ -410,23 +390,74 @@ Exosite_SetCIK(char * pCIK)
 int
 Exosite_GetCIK(char * pCIK)
 {
-  unsigned char i;
+//  unsigned char i;
   char tempCIK[CIK_LENGTH + 1];
 
   exosite_meta_read((unsigned char *)tempCIK, CIK_LENGTH, META_CIK);
   tempCIK[CIK_LENGTH] = 0;
 
-  for (i = 0; i < CIK_LENGTH; i++)
-  {
-    if (!(tempCIK[i] >= 'a' && tempCIK[i] <= 'f' || tempCIK[i] >= '0' && tempCIK[i] <= '9'))
-    {
-      status_code = EXO_STATUS_BAD_CIK;
-      return 0;
-    }
-  }
+  // THIS SECTION REMOVED FROM CODE
+  // MURANO STILL SUPPORTS THIS IF SET TO CIK AUTHENTICATION
+  // HOWEVER, THIS IS NO LONGER NECESSARY WITH TOKEN AUTHORIZATION
+  // EITHER WAY, THIS CHECK IS NO LONGER NECESSARY
+
+  //for (i = 0; i < CIK_LENGTH; i++)
+  //{
+  //  UARTprintf(" tempcik: %d",'a');
+  //  if (!(tempCIK[i] >= 'a' && tempCIK[i] <= 'f' || tempCIK[i] >= '0' && tempCIK[i] <= '9'))
+  //  {
+  //    status_code = EXO_STATUS_BAD_CIK;
+  //    return 0;
+  //  }
+  //}
 
   if (NULL != pCIK)
     memcpy(pCIK ,tempCIK ,CIK_LENGTH + 1);
+
+  return 1;
+}
+
+/*****************************************************************************
+*
+* Exosite_GetPID
+*
+*  \param  pointer to buffer to receive PID or NULL
+*
+*  \return 1 - PID was valid, 0 - PID was invalid.
+*
+*  \brief  Retrieves a PID from flash / non volatile
+*
+*****************************************************************************/
+int
+Exosite_GetPID(char * pPID)
+{
+  unsigned char i;
+  char tempPID[EXOSITE_PID_LENGTH + 1];
+
+  exosite_meta_read((unsigned char *)tempPID, EXOSITE_PID_LENGTH, META_PID);
+  tempPID[EXOSITE_PID_LENGTH] = 0;
+
+  for (i = 0; i < EXOSITE_PID_LENGTH; i++)
+  {
+	  //
+	  // PID length varies. Currently it is either 16 or 17 characters. However,
+	  // It could be less than 16 or more than 17 in the future. Right now, assume
+	  // it will at least be greater than 10. Break out if the ASCII code is 0x00
+	  // or 0xFF.
+	  //
+	  if ((i > 10) && (tempPID[i] == 255  || tempPID[i] == NULL))
+	  {
+		  tempPID[i] = 0;
+	  	  break;
+	  } else if (!(tempPID[i] >= 'a' && tempPID[i] <= 'z' || tempPID[i] >= '0' && tempPID[i] <= '9'))
+
+	  {
+		  return 0;
+	  }
+  }
+
+  if (NULL != pPID)
+  	  strcpy(pPID, tempPID);
 
   return 1;
 }
@@ -560,6 +591,8 @@ Exosite_Read(char * palias, char * pbuf, unsigned int buflen)
   sendLine(sock, HOST_LINE, NULL);
   sendLine(sock, CIK_LINE, bufCIK);
   sendLine(sock, ACCEPT_LINE, "\r\n");
+  sendLine(sock, EMPTY_LINE, NULL);
+
 
   //
   // Modified by Texas Instruments DGT comment reference to pcheck no longer
@@ -598,36 +631,6 @@ Exosite_Read(char * palias, char * pbuf, unsigned int buflen)
       // The body is "<key>=<value>"
       if (0 < len && 4 == crlf && buflen > vlen)
       {
-
-          // Code below removed by CAJ. Removing the key works for a single
-          // READ request, but doesn't work if multiple values were requested.
-          // For multiple values, the server is not guaranteed to return every
-          // value in the same order that they were sent. This means that the
-          // caller will need the "key" to be able to determine which value
-          // belongs with which alias.
-
-        // Move past "<key>"
-//        while (0 < len && 0 != *pcheck)
-//        {
-//          if (*pcheck == *p)
-//          {
-//            ++pcheck;
-//          }
-//          else
-//          {
-//            pcheck = palias;
-//          }
-//          ++p;
-//          --len;
-//        }
-//
-//        // Match '=',  we should now have '<key>='
-//        if (0 < len && 0 == *pcheck && '=' == *p)
-//        {
-//          ++p;
-//          --len;
-//        }
-//
         // read in the rest of the body as the value
         while (0 < len && buflen > vlen)
         {
@@ -782,18 +785,20 @@ sendLine(long socket, unsigned char LINE, const char * payload)
       strLen += strlen(STR_CRLF);
       break;
     case HOST_LINE:
-      strLen = strlen(STR_HOST);
-      memcpy(strBuf,STR_HOST,strLen);
+        strLen = strlen(STR_HOST_HEADER);
+        memcpy(strBuf,STR_HOST_HEADER,strLen);
+        memcpy(&strBuf[strLen],g_pcExositeAddr, strlen(g_pcExositeAddr));
+        strLen += strlen(g_pcExositeAddr);
+        memcpy(&strBuf[strLen],STR_CRLF, 2);
+        strLen += strlen(STR_CRLF);
       break;
-    case CONTENT_LINE:
+	case CONTENT_LINE:
       strLen = strlen(STR_CONTENT);
       memcpy(strBuf,STR_CONTENT,strLen);
       break;
     case ACCEPT_LINE:
       strLen = strlen(STR_ACCEPT);
       memcpy(strBuf,STR_ACCEPT,strLen);
-      memcpy(&strBuf[strLen],payload, strlen(payload));
-      strLen += strlen(payload);
       break;
     case LENGTH_LINE: // Content-Length: NN
       strLen = strlen(STR_CONTENT_LENGTH);
@@ -828,12 +833,12 @@ sendLine(long socket, unsigned char LINE, const char * payload)
     default:
       break;
   }
-
   strBuf[strLen] = 0;
   exoHAL_SocketSend(socket, strBuf, strLen);
 
   return;
 }
+
 
 
 

@@ -2,7 +2,7 @@
 //
 // bl_autobaud.c - Automatic baud rate detection code.
 //
-// Copyright (c) 2006-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2006-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -124,7 +124,9 @@ GPIOIntHandler(void)
 //! to communicate with the boot loader.  The UART port is monitored for edges
 //! using interrupts.  Once enough edges are detected, the boot loader
 //! determines the ratio of baud rate and crystal frequency needed to program
-//! the UART.
+//! the UART.  To accomplish this, two data packets of 0x55 should be
+//! transmitted on the UART lines to generate a sufficient number of edges for
+//! the function to detect the baud rate.
 //!
 //! \return Returns a value of 0 to indicate that this call successfully
 //! synchronized with the other device communicating over the UART, and a

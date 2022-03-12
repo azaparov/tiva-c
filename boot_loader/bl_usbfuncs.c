@@ -3,7 +3,7 @@
 // bl_usbfuncs.c - The subset of USB library functions required by the USB DFU
 //                 boot loader.
 //
-// Copyright (c) 2008-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2008-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -19,7 +19,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -484,20 +484,55 @@ USBConfigurePins(void)
     //
     // Enable the clocks to the GPIOs.
     //
-    HWREG(SYSCTL_RCGCGPIO) |= (0x0
+    HWREG(SYSCTL_RCGCGPIO) |=
+        (0x0 |
 #if defined(USB_VBUS_CONFIG)
-        | USB_VBUS_PERIPH
+         USB_VBUS_PERIPH |
 #endif
 #if defined(USB_ID_CONFIG)
-        | USB_ID_PERIPH
+         USB_ID_PERIPH |
 #endif
 #if defined(USB_DP_CONFIG)
-        | USB_DP_PERIPH
+         USB_DP_PERIPH |
 #endif
 #if defined(USB_DM_CONFIG)
-        | USB_DM_PERIPH
+         USB_DM_PERIPH
 #endif
         );
+
+    //
+    // Wait for the Peripherals to be Ready before accessing the register
+    // address space.
+    //
+    while((HWREG(SYSCTL_PRGPIO) &
+          (0x0 |
+#if defined(USB_VBUS_CONFIG)
+           USB_VBUS_PERIPH |
+#endif
+#if defined(USB_ID_CONFIG)
+           USB_ID_PERIPH |
+#endif
+#if defined(USB_DP_CONFIG)
+           USB_DP_PERIPH |
+#endif
+#if defined(USB_DM_CONFIG)
+           USB_DM_PERIPH
+#endif
+        )) !=
+            (0x0 |
+#if defined(USB_VBUS_CONFIG)
+             USB_VBUS_PERIPH |
+#endif
+#if defined(USB_ID_CONFIG)
+             USB_ID_PERIPH |
+#endif
+#if defined(USB_DP_CONFIG)
+             USB_DP_PERIPH |
+#endif
+#if defined(USB_DM_CONFIG)
+             USB_DM_PERIPH
+#endif
+            ));
 
     // 
     // Setup the pins based on bl_config.h
@@ -566,12 +601,28 @@ USBBLInit(void)
     //
     // Enable the USB controller.
     //
-    HWREG(SYSCTL_RCGC2) |= 0x10000;
+    HWREG(SYSCTL_RCGCUSB) = SYSCTL_RCGCUSB_R0;
 
+    //
+    // Wait for the peripheral ready
+    //
+    while((HWREG(SYSCTL_PRUSB) & SYSCTL_PRUSB_R0) != SYSCTL_PRUSB_R0)
+    {
+    }
+
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+    defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
+    //
+    // Turn on USB Phy clock from PLL VCO
+    //
+    HWREG(USB0_BASE + USB_O_CC) = (USB_CC_CLKEN | (7 << USB_CC_CLKDIV_S));
+#else
     //
     // Turn on USB Phy clock.
     //
     HWREG(SYSCTL_RCC2) &= ~SYSCTL_RCC2_USBPWRDN;
+#endif
 
     //
     // Clear any pending interrupts.

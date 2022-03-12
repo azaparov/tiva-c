@@ -3,7 +3,7 @@
 // wavfile.h - This file supports reading audio data from a .wav file and
 // reading the file format.
 //
-// Copyright (c) 2012-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2012-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -19,7 +19,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Utility Library.
+// This is part of revision 2.2.0.295 of the Tiva Utility Library.
 //
 //*****************************************************************************
 
@@ -28,7 +28,7 @@
 
 //*****************************************************************************
 //
-// The wav file header information.
+// The .wav file header information.
 //
 //*****************************************************************************
 typedef struct
@@ -39,12 +39,12 @@ typedef struct
     uint32_t ui32SampleRate;
 
     //
-    // The average byte rate for the wav file.
+    // The average byte rate for the .wav file.
     //
     uint32_t ui32AvgByteRate;
 
     //
-    // The size of the wav data in the file.
+    // The size of the .wav data in the file.
     //
     uint32_t ui32DataSize;
 
@@ -54,7 +54,7 @@ typedef struct
     uint16_t ui16BitsPerSample;
 
     //
-    // The wav file format.
+    // The .wav file format.
     //
     uint16_t ui16Format;
 
@@ -67,7 +67,7 @@ tWavHeader;
 
 //*****************************************************************************
 //
-// The structure used to hold the wav file state.
+// The structure used to hold the .wav file state.
 //
 //*****************************************************************************
 typedef struct

@@ -2,7 +2,7 @@
 //
 // bl_flash.h - Flash programming functions used by the boot loader.
 //
-// Copyright (c) 2006-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2006-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -104,14 +104,14 @@ extern uint32_t BL_FLASH_ERROR_FN_HOOK(void);
 
 #ifndef BL_FLASH_SIZE_FN_HOOK
 #define BL_FLASH_SIZE_FN_HOOK()                                               \
-        (((HWREG(SYSCTL_DC0) & SYSCTL_DC0_FLASHSZ_M) + 1) << 11)
+        (((HWREG(FLASH_PP) & FLASH_PP_SIZE_M) + 1) << 11)
 #else
 extern uint32_t BL_FLASH_SIZE_FN_HOOK(void);
 #endif
 
 #ifndef BL_FLASH_END_FN_HOOK
 #define BL_FLASH_END_FN_HOOK()                                               \
-        (((HWREG(SYSCTL_DC0) & SYSCTL_DC0_FLASHSZ_M) + 1) << 11)
+        (((HWREG(FLASH_PP) & FLASH_PP_SIZE_M) + 1) << 11)
 #else
 extern uint32_t BL_FLASH_END_FN_HOOK(void);
 #endif

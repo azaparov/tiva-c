@@ -2,7 +2,7 @@
 //
 // bl_main.c - The file holds the main control loop of the boot loader.
 //
-// Copyright (c) 2006-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2006-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -197,75 +197,146 @@ ConfigureDevice(void)
     // Since the crystal frequency was specified, enable the main oscillator
     // and clock the processor from it.
     //
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+    defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
+    //
+    // Since the crystal frequency was specified, enable the main oscillator
+    // and clock the processor from it. Check for whether the Oscillator range
+    // has to be set and wait states need to be updated
+    //
+    if(CRYSTAL_FREQ >= 10000000)
+    {
+        HWREG(SYSCTL_MOSCCTL) |= (SYSCTL_MOSCCTL_OSCRNG);
+        HWREG(SYSCTL_MOSCCTL) &= ~(SYSCTL_MOSCCTL_PWRDN |
+                                   SYSCTL_MOSCCTL_NOXTAL);
+    }
+    else
+    {
+        HWREG(SYSCTL_MOSCCTL) &= ~(SYSCTL_MOSCCTL_PWRDN |
+                                   SYSCTL_MOSCCTL_NOXTAL);
+    }
+
+    //
+    // Wait for the Oscillator to Stabilize
+    //
+    Delay(524288);
+
+    if(CRYSTAL_FREQ > 16000000)
+    {
+        HWREG(SYSCTL_MEMTIM0)  = (SYSCTL_MEMTIM0_FBCHT_1_5 |
+                                  (1 << SYSCTL_MEMTIM0_FWS_S) |
+                                  SYSCTL_MEMTIM0_EBCHT_1_5 |
+                                  (1 << SYSCTL_MEMTIM0_EWS_S) |
+                                  SYSCTL_MEMTIM0_MB1);
+        HWREG(SYSCTL_RSCLKCFG) = (SYSCTL_RSCLKCFG_MEMTIMU |
+                                  SYSCTL_RSCLKCFG_OSCSRC_MOSC);
+    }
+    else
+    {
+        HWREG(SYSCTL_RSCLKCFG) = (SYSCTL_RSCLKCFG_OSCSRC_MOSC);
+    }
+#else
     HWREG(SYSCTL_RCC) &= ~(SYSCTL_RCC_MOSCDIS);
     Delay(524288);
     HWREG(SYSCTL_RCC) = ((HWREG(SYSCTL_RCC) & ~(SYSCTL_RCC_OSCSRC_M)) |
                          SYSCTL_RCC_OSCSRC_MAIN);
+#endif
 #endif
 
 #ifdef I2C_ENABLE_UPDATE
     //
     // Enable the clocks to the I2C and GPIO modules.
     //
-    HWREG(SYSCTL_RCGC2) |= SYSCTL_RCGC2_GPIOB;
-    HWREG(SYSCTL_RCGC1) |= SYSCTL_RCGC1_I2C0;
+    HWREG(SYSCTL_RCGCGPIO) |= (I2C_SCLPIN_CLOCK_ENABLE |
+                               I2C_SDAPIN_CLOCK_ENABLE);
+    HWREG(SYSCTL_RCGCI2C) |= I2C_CLOCK_ENABLE;
 
     //
     // Configure the GPIO pins for hardware control, open drain with pull-up,
     // and enable them.
     //
-    HWREG(GPIO_PORTB_BASE + GPIO_O_AFSEL) |= (1 << 7) | I2C_PINS;
-    HWREG(GPIO_PORTB_BASE + GPIO_O_DEN) |= (1 << 7) | I2C_PINS;
-    HWREG(GPIO_PORTB_BASE + GPIO_O_ODR) |= I2C_PINS;
+    HWREG(I2C_SCLPIN_BASE + GPIO_O_AFSEL) |= I2C_CLK;
+    HWREG(I2C_SCLPIN_BASE + GPIO_O_PCTL) |= I2C_CLK_PCTL;
+    HWREG(I2C_SCLPIN_BASE + GPIO_O_DEN) |= I2C_CLK;
+    HWREG(I2C_SCLPIN_BASE + GPIO_O_ODR) &= ~(I2C_CLK);
+    HWREG(I2C_SCLPIN_BASE + GPIO_O_PUR) |= I2C_CLK;
+
+    HWREG(I2C_SDAPIN_BASE + GPIO_O_AFSEL) |= I2C_DATA;
+    HWREG(I2C_SDAPIN_BASE + GPIO_O_PCTL) |= I2C_DATA_PCTL;
+    HWREG(I2C_SDAPIN_BASE + GPIO_O_DEN) |= I2C_DATA;
+    HWREG(I2C_SDAPIN_BASE + GPIO_O_ODR) |= I2C_DATA;
+    HWREG(I2C_SDAPIN_BASE + GPIO_O_PUR) |= I2C_DATA;
 
     //
     // Enable the I2C Slave Mode.
     //
-    HWREG(I2C0_BASE + I2C_O_MCR) = I2C_MCR_MFE | I2C_MCR_SFE;
+    HWREG(I2Cx_BASE + I2C_O_MCR) = I2C_MCR_MFE | I2C_MCR_SFE;
 
     //
     // Setup the I2C Slave Address.
     //
-    HWREG(I2C0_BASE + I2C_O_SOAR) = I2C_SLAVE_ADDR;
+    HWREG(I2Cx_BASE + I2C_O_SOAR) = I2C_SLAVE_ADDR;
 
     //
     // Enable the I2C Slave Device on the I2C bus.
     //
-    HWREG(I2C0_BASE + I2C_O_SCSR) = I2C_SCSR_DA;
+    HWREG(I2Cx_BASE + I2C_O_SCSR) = I2C_SCSR_DA;
 #endif
 
 #ifdef SSI_ENABLE_UPDATE
     //
     // Enable the clocks to the SSI and GPIO modules.
     //
-    HWREG(SYSCTL_RCGC2) |= SYSCTL_RCGC2_GPIOA;
-    HWREG(SYSCTL_RCGC1) |= SYSCTL_RCGC1_SSI0;
+    HWREG(SYSCTL_RCGCGPIO) |= (SSI_CLKPIN_CLOCK_ENABLE |
+                               SSI_FSSPIN_CLOCK_ENABLE |
+                               SSI_MISOPIN_CLOCK_ENABLE |
+                               SSI_MOSIPIN_CLOCK_ENABLE);
+    HWREG(SYSCTL_RCGCSSI) |= SSI_CLOCK_ENABLE;
 
     //
     // Make the pin be peripheral controlled.
     //
-    HWREG(GPIO_PORTA_BASE + GPIO_O_AFSEL) |= SSI_PINS;
-    HWREG(GPIO_PORTA_BASE + GPIO_O_DEN) |= SSI_PINS;
+    HWREG(SSI_CLKPIN_BASE + GPIO_O_AFSEL) |= SSI_CLK;
+    HWREG(SSI_CLKPIN_BASE + GPIO_O_PCTL) |= SSI_CLK_PCTL;
+    HWREG(SSI_CLKPIN_BASE + GPIO_O_DEN) |= SSI_CLK;
+    HWREG(SSI_CLKPIN_BASE + GPIO_O_ODR) &= ~(SSI_CLK);
+
+    HWREG(SSI_FSSPIN_BASE + GPIO_O_AFSEL) |= SSI_CS;
+    HWREG(SSI_FSSPIN_BASE + GPIO_O_PCTL) |= SSI_CS_PCTL;
+    HWREG(SSI_FSSPIN_BASE + GPIO_O_DEN) |= SSI_CS;
+    HWREG(SSI_FSSPIN_BASE + GPIO_O_ODR) &= ~(SSI_CS);
+
+    HWREG(SSI_MISOPIN_BASE + GPIO_O_AFSEL) |= SSI_TX;
+    HWREG(SSI_MISOPIN_BASE + GPIO_O_PCTL) |= SSI_TX_PCTL;
+    HWREG(SSI_MISOPIN_BASE + GPIO_O_DEN) |= SSI_TX;
+    HWREG(SSI_MISOPIN_BASE + GPIO_O_ODR) &= ~(SSI_TX);
+
+    HWREG(SSI_MOSIPIN_BASE + GPIO_O_AFSEL) |= SSI_RX;
+    HWREG(SSI_MOSIPIN_BASE + GPIO_O_PCTL) |= SSI_RX_PCTL;
+    HWREG(SSI_MOSIPIN_BASE + GPIO_O_DEN) |= SSI_RX;
+    HWREG(SSI_MOSIPIN_BASE + GPIO_O_ODR) &= ~(SSI_RX);
 
     //
     // Set the SSI protocol to Motorola with default clock high and data
     // valid on the rising edge.
     //
-    HWREG(SSI0_BASE + SSI_O_CR0) = (SSI_CR0_SPH | SSI_CR0_SPO |
+    HWREG(SSIx_BASE + SSI_O_CR0) = (SSI_CR0_SPH | SSI_CR0_SPO |
                                     (DATA_BITS_SSI - 1));
 
     //
     // Enable the SSI interface in slave mode.
     //
-    HWREG(SSI0_BASE + SSI_O_CR1) = SSI_CR1_MS | SSI_CR1_SSE;
+    HWREG(SSIx_BASE + SSI_O_CR1) = SSI_CR1_MS | SSI_CR1_SSE;
 #endif
 
 #ifdef UART_ENABLE_UPDATE
     //
     // Enable the the clocks to the UART and GPIO modules.
     //
-    HWREG(SYSCTL_RCGC2) |= SYSCTL_RCGC2_GPIOA;
-    HWREG(SYSCTL_RCGC1) |= SYSCTL_RCGC1_UART0;
+    HWREG(SYSCTL_RCGCGPIO) |= (UART_RXPIN_CLOCK_ENABLE |
+                               UART_TXPIN_CLOCK_ENABLE);
+    HWREG(SYSCTL_RCGCUART) |= UART_CLOCK_ENABLE;
 
     //
     // Keep attempting to sync until we are successful.
@@ -279,30 +350,33 @@ ConfigureDevice(void)
 #endif
 
     //
-    // Set GPIO A0 and A1 as UART pins.
+    // Make the pin be peripheral controlled.
     //
-    HWREG(GPIO_PORTA_BASE + GPIO_O_AFSEL) |= UART_PINS;
+    HWREG(UART_RXPIN_BASE + GPIO_O_AFSEL) |= UART_RX;
+    HWREG(UART_RXPIN_BASE + GPIO_O_PCTL) |= UART_RX_PCTL;
+    HWREG(UART_RXPIN_BASE + GPIO_O_ODR) &= ~(UART_RX);
+    HWREG(UART_RXPIN_BASE + GPIO_O_DEN) |= UART_RX;
 
-    //
-    // Set the pin type.
-    //
-    HWREG(GPIO_PORTA_BASE + GPIO_O_DEN) |= UART_PINS;
+    HWREG(UART_TXPIN_BASE + GPIO_O_AFSEL) |= UART_TX;
+    HWREG(UART_TXPIN_BASE + GPIO_O_PCTL) |= UART_TX_PCTL;
+    HWREG(UART_TXPIN_BASE + GPIO_O_ODR) &= ~(UART_TX);
+    HWREG(UART_TXPIN_BASE + GPIO_O_DEN) |= UART_TX;
 
     //
     // Set the baud rate.
     //
-    HWREG(UART0_BASE + UART_O_IBRD) = ui32ProcRatio >> 6;
-    HWREG(UART0_BASE + UART_O_FBRD) = ui32ProcRatio & UART_FBRD_DIVFRAC_M;
+    HWREG(UARTx_BASE + UART_O_IBRD) = ui32ProcRatio >> 6;
+    HWREG(UARTx_BASE + UART_O_FBRD) = ui32ProcRatio & UART_FBRD_DIVFRAC_M;
 
     //
     // Set data length, parity, and number of stop bits to 8-N-1.
     //
-    HWREG(UART0_BASE + UART_O_LCRH) = UART_LCRH_WLEN_8 | UART_LCRH_FEN;
+    HWREG(UARTx_BASE + UART_O_LCRH) = UART_LCRH_WLEN_8 | UART_LCRH_FEN;
 
     //
     // Enable RX, TX, and the UART.
     //
-    HWREG(UART0_BASE + UART_O_CTL) = (UART_CTL_UARTEN | UART_CTL_TXE |
+    HWREG(UARTx_BASE + UART_O_CTL) = (UART_CTL_UARTEN | UART_CTL_TXE |
                                       UART_CTL_RXE);
 
 #ifdef UART_AUTOBAUD
@@ -602,18 +676,20 @@ Updater(void)
                 // Reset and disable the peripherals used by the boot loader.
                 //
 #ifdef I2C_ENABLE_UPDATE
-                HWREG(SYSCTL_RCGC1) &= ~SYSCTL_RCGC1_I2C0;
-                HWREG(SYSCTL_SRCR1) = SYSCTL_SRCR1_I2C0;
+                HWREG(SYSCTL_RCGCI2C) &= ~I2C_CLOCK_ENABLE;
+                HWREG(SYSCTL_SRI2C) = I2C_CLOCK_ENABLE;
+                HWREG(SYSCTL_SRI2C) = 0;
 #endif
 #ifdef UART_ENABLE_UPDATE
-                HWREG(SYSCTL_RCGC1) &= ~SYSCTL_RCGC1_UART0;
-                HWREG(SYSCTL_SRCR1) = SYSCTL_SRCR1_UART0;
+                HWREG(SYSCTL_RCGCUART) &= ~UART_CLOCK_ENABLE;
+                HWREG(SYSCTL_SRUART) = UART_CLOCK_ENABLE;
+                HWREG(SYSCTL_SRUART) = 0;
 #endif
 #ifdef SSI_ENABLE_UPDATE
-                HWREG(SYSCTL_RCGC1) &= ~SYSCTL_RCGC1_SSI0;
-                HWREG(SYSCTL_SRCR1) = SYSCTL_SRCR1_SSI0;
+                HWREG(SYSCTL_RCGCSSI) &= ~SSI_CLOCK_ENABLE;
+                HWREG(SYSCTL_SRSSI) = SSI_CLOCK_ENABLE;
+                HWREG(SYSCTL_SRSSI) = 0;
 #endif
-                HWREG(SYSCTL_SRCR1) = 0;
 
                 //
                 // Branch to the specified address.  This should never return.
@@ -794,17 +870,17 @@ Updater(void)
 #endif
                             {
                                 //
-                                // The calculated CRC didn't match the expected
-                                // value or the image didn't contain an embedded
-                                // CRC.
+                                // The calculated CRC agreed with the embedded
+                                // value.
                                 //
                                 g_ui8Status = COMMAND_RET_SUCCESS;
                             }
                             else
                             {
                                 //
-                                // The calculated CRC agreed with the embedded
-                                // value.
+                                // The calculated CRC didn't match the expected
+                                // value or the image didn't contain an embedded
+                                // CRC.
                                 //
                                 g_ui8Status = COMMAND_RET_CRC_FAIL;
                             }

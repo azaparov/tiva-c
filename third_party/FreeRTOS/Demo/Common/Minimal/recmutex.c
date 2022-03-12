@@ -1,60 +1,64 @@
 /*
-    FreeRTOS V7.6.0 - Copyright (C) 2013 Real Time Engineers Ltd.
+    FreeRTOS V8.2.3 - Copyright (C) 2015 Real Time Engineers Ltd.
     All rights reserved
 
     VISIT http://www.FreeRTOS.org TO ENSURE YOU ARE USING THE LATEST VERSION.
-
-    ***************************************************************************
-     *                                                                       *
-     *    FreeRTOS provides completely free yet professionally developed,    *
-     *    robust, strictly quality controlled, supported, and cross          *
-     *    platform software that has become a de facto standard.             *
-     *                                                                       *
-     *    Help yourself get started quickly and support the FreeRTOS         *
-     *    project by purchasing a FreeRTOS tutorial book, reference          *
-     *    manual, or both from: http://www.FreeRTOS.org/Documentation        *
-     *                                                                       *
-     *    Thank you!                                                         *
-     *                                                                       *
-    ***************************************************************************
 
     This file is part of the FreeRTOS distribution.
 
     FreeRTOS is free software; you can redistribute it and/or modify it under
     the terms of the GNU General Public License (version 2) as published by the
-    Free Software Foundation >>!AND MODIFIED BY!<< the FreeRTOS exception.
+    Free Software Foundation >>>> AND MODIFIED BY <<<< the FreeRTOS exception.
 
-    >>! NOTE: The modification to the GPL is included to allow you to distribute
-    >>! a combined work that includes FreeRTOS without being obliged to provide
-    >>! the source code for proprietary components outside of the FreeRTOS
-    >>! kernel.
+    ***************************************************************************
+    >>!   NOTE: The modification to the GPL is included to allow you to     !<<
+    >>!   distribute a combined work that includes FreeRTOS without being   !<<
+    >>!   obliged to provide the source code for proprietary components     !<<
+    >>!   outside of the FreeRTOS kernel.                                   !<<
+    ***************************************************************************
 
     FreeRTOS is distributed in the hope that it will be useful, but WITHOUT ANY
     WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-    FOR A PARTICULAR PURPOSE.  Full license text is available from the following
+    FOR A PARTICULAR PURPOSE.  Full license text is available on the following
     link: http://www.freertos.org/a00114.html
 
-    1 tab == 4 spaces!
-
     ***************************************************************************
      *                                                                       *
-     *    Having a problem?  Start by reading the FAQ "My application does   *
-     *    not run, what could be wrong?"                                     *
+     *    FreeRTOS provides completely free yet professionally developed,    *
+     *    robust, strictly quality controlled, supported, and cross          *
+     *    platform software that is more than just the market leader, it     *
+     *    is the industry's de facto standard.                               *
      *                                                                       *
-     *    http://www.FreeRTOS.org/FAQHelp.html                               *
+     *    Help yourself get started quickly while simultaneously helping     *
+     *    to support the FreeRTOS project by purchasing a FreeRTOS           *
+     *    tutorial book, reference manual, or both:                          *
+     *    http://www.FreeRTOS.org/Documentation                              *
      *                                                                       *
     ***************************************************************************
 
-    http://www.FreeRTOS.org - Documentation, books, training, latest versions,
-    license and Real Time Engineers Ltd. contact details.
+    http://www.FreeRTOS.org/FAQHelp.html - Having a problem?  Start by reading
+    the FAQ page "My application does not run, what could be wrong?".  Have you
+    defined configASSERT()?
+
+    http://www.FreeRTOS.org/support - In return for receiving this top quality
+    embedded software for free we request you assist our global community by
+    participating in the support forum.
+
+    http://www.FreeRTOS.org/training - Investing in training allows your team to
+    be as productive as possible as early as possible.  Now you can receive
+    FreeRTOS training directly from Richard Barry, CEO of Real Time Engineers
+    Ltd, and the world's leading authority on the world's leading RTOS.
 
     http://www.FreeRTOS.org/plus - A selection of FreeRTOS ecosystem products,
     including FreeRTOS+Trace - an indispensable productivity tool, a DOS
     compatible FAT file system, and our tiny thread aware UDP/IP stack.
 
-    http://www.OpenRTOS.com - Real Time Engineers ltd license FreeRTOS to High
-    Integrity Systems to sell under the OpenRTOS brand.  Low cost OpenRTOS
-    licenses offer ticketed support, indemnification and middleware.
+    http://www.FreeRTOS.org/labs - Where new FreeRTOS products go to incubate.
+    Come and try FreeRTOS+TCP, our new open source TCP/IP stack for FreeRTOS.
+
+    http://www.OpenRTOS.com - Real Time Engineers ltd. license FreeRTOS to High
+    Integrity Systems ltd. to sell under the OpenRTOS brand.  Low cost OpenRTOS
+    licenses offer ticketed support, indemnification and commercial middleware.
 
     http://www.SafeRTOS.com - High Integrity Systems also provide a safety
     engineered and independently SIL3 certified version for use in safety and
@@ -119,9 +123,9 @@ be overridden by a definition in FreeRTOSConfig.h. */
 #define recmuMAX_COUNT					( 10 )
 
 /* Misc. */
-#define recmuSHORT_DELAY				( 20 / portTICK_RATE_MS )
-#define recmuNO_DELAY					( ( portTickType ) 0 )
-#define recmuFIVE_TICK_DELAY			( ( portTickType ) 5 )
+#define recmuSHORT_DELAY				( pdMS_TO_TICKS( 20 ) )
+#define recmuNO_DELAY					( ( TickType_t ) 0 )
+#define recmuEIGHT_TICK_DELAY			( ( TickType_t ) 8 )
 
 /* The three tasks as described at the top of this file. */
 static void prvRecursiveMutexControllingTask( void *pvParameters );
@@ -129,15 +133,15 @@ static void prvRecursiveMutexBlockingTask( void *pvParameters );
 static void prvRecursiveMutexPollingTask( void *pvParameters );
 
 /* The mutex used by the demo. */
-static xSemaphoreHandle xMutex;
+static SemaphoreHandle_t xMutex;
 
 /* Variables used to detect and latch errors. */
-static volatile portBASE_TYPE xErrorOccurred = pdFALSE, xControllingIsSuspended = pdFALSE, xBlockingIsSuspended = pdFALSE;
-static volatile unsigned portBASE_TYPE uxControllingCycles = 0, uxBlockingCycles = 0, uxPollingCycles = 0;
+static volatile BaseType_t xErrorOccurred = pdFALSE, xControllingIsSuspended = pdFALSE, xBlockingIsSuspended = pdFALSE;
+static volatile UBaseType_t uxControllingCycles = 0, uxBlockingCycles = 0, uxPollingCycles = 0;
 
 /* Handles of the two higher priority tasks, required so they can be resumed
 (unsuspended). */
-static xTaskHandle xControllingTaskHandle, xBlockingTaskHandle;
+static TaskHandle_t xControllingTaskHandle, xBlockingTaskHandle;
 
 /*-----------------------------------------------------------*/
 
@@ -153,21 +157,21 @@ void vStartRecursiveMutexTasks( void )
 	is not being used.  The call to vQueueAddToRegistry() will be removed
 	by the pre-processor if configQUEUE_REGISTRY_SIZE is not defined or is
 	defined to be less than 1. */
-	vQueueAddToRegistry( ( xQueueHandle ) xMutex, ( signed portCHAR * ) "Recursive_Mutex" );
+	vQueueAddToRegistry( ( QueueHandle_t ) xMutex, "Recursive_Mutex" );
 
 
 	if( xMutex != NULL )
 	{
-		xTaskCreate( prvRecursiveMutexControllingTask, ( signed portCHAR * ) "Rec1", configMINIMAL_STACK_SIZE, NULL, recmuCONTROLLING_TASK_PRIORITY, &xControllingTaskHandle );
-        xTaskCreate( prvRecursiveMutexBlockingTask, ( signed portCHAR * ) "Rec2", configMINIMAL_STACK_SIZE, NULL, recmuBLOCKING_TASK_PRIORITY, &xBlockingTaskHandle );
-        xTaskCreate( prvRecursiveMutexPollingTask, ( signed portCHAR * ) "Rec3", configMINIMAL_STACK_SIZE, NULL, recmuPOLLING_TASK_PRIORITY, NULL );
+		xTaskCreate( prvRecursiveMutexControllingTask, "Rec1", configMINIMAL_STACK_SIZE, NULL, recmuCONTROLLING_TASK_PRIORITY, &xControllingTaskHandle );
+        xTaskCreate( prvRecursiveMutexBlockingTask, "Rec2", configMINIMAL_STACK_SIZE, NULL, recmuBLOCKING_TASK_PRIORITY, &xBlockingTaskHandle );
+        xTaskCreate( prvRecursiveMutexPollingTask, "Rec3", configMINIMAL_STACK_SIZE, NULL, recmuPOLLING_TASK_PRIORITY, NULL );
 	}
 }
 /*-----------------------------------------------------------*/
 
 static void prvRecursiveMutexControllingTask( void *pvParameters )
 {
-unsigned portBASE_TYPE ux;
+UBaseType_t ux;
 
 	/* Just to remove compiler warning. */
 	( void ) pvParameters;
@@ -195,7 +199,7 @@ unsigned portBASE_TYPE ux;
 			long enough to ensure the polling task will execute again before the
 			block time expires.  If the block time does expire then the error
 			flag will be set here. */
-			if( xSemaphoreTakeRecursive( xMutex, recmuFIVE_TICK_DELAY ) != pdPASS )
+			if( xSemaphoreTakeRecursive( xMutex, recmuEIGHT_TICK_DELAY ) != pdPASS )
 			{
 				xErrorOccurred = pdTRUE;
 			}
@@ -223,6 +227,10 @@ unsigned portBASE_TYPE ux;
 			{
 				xErrorOccurred = pdTRUE;
 			}
+
+			#if( configUSE_PREEMPTION == 0 )
+				taskYIELD();
+			#endif
 		}
 
 		/* Having given it back the same number of times as it was taken, we
@@ -340,7 +348,14 @@ static void prvRecursiveMutexPollingTask( void *pvParameters )
 				error will be latched if the polling task has not returned the
 				mutex by the time this fixed period has expired. */
 				vTaskResume( xBlockingTaskHandle );
-                vTaskResume( xControllingTaskHandle );
+				#if( configUSE_PREEMPTION == 0 )
+					taskYIELD();
+				#endif
+
+				vTaskResume( xControllingTaskHandle );
+				#if( configUSE_PREEMPTION == 0 )
+					taskYIELD();
+				#endif
 
 				/* The other two tasks should now have executed and no longer
 				be suspended. */
@@ -388,10 +403,10 @@ static void prvRecursiveMutexPollingTask( void *pvParameters )
 /*-----------------------------------------------------------*/
 
 /* This is called to check that all the created tasks are still running. */
-portBASE_TYPE xAreRecursiveMutexTasksStillRunning( void )
+BaseType_t xAreRecursiveMutexTasksStillRunning( void )
 {
-portBASE_TYPE xReturn;
-static unsigned portBASE_TYPE uxLastControllingCycles = 0, uxLastBlockingCycles = 0, uxLastPollingCycles = 0;
+BaseType_t xReturn;
+static UBaseType_t uxLastControllingCycles = 0, uxLastBlockingCycles = 0, uxLastPollingCycles = 0;
 
 	/* Is the controlling task still cycling? */
 	if( uxLastControllingCycles == uxControllingCycles )
@@ -429,7 +444,7 @@ static unsigned portBASE_TYPE uxLastControllingCycles = 0, uxLastBlockingCycles 
 	}
 	else
 	{
-		xReturn = pdTRUE;
+		xReturn = pdPASS;
 	}
 
 	return xReturn;

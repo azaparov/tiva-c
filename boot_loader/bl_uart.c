@@ -2,7 +2,7 @@
 //
 // bl_uart.c - Functions to transfer data via the UART port.
 //
-// Copyright (c) 2006-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2006-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -65,14 +65,14 @@ UARTSend(const uint8_t *pui8Data, uint32_t ui32Size)
         //
         // Make sure that the transmit FIFO is not full.
         //
-        while((HWREG(UART0_BASE + UART_O_FR) & UART_FR_TXFF))
+        while((HWREG(UARTx_BASE + UART_O_FR) & UART_FR_TXFF))
         {
         }
 
         //
         // Send out the next byte.
         //
-        HWREG(UART0_BASE + UART_O_DR) = *pui8Data++;
+        HWREG(UARTx_BASE + UART_O_DR) = *pui8Data++;
     }
 
     //
@@ -98,14 +98,14 @@ UARTFlush(void)
     // Wait for the UART FIFO to empty and then wait for the shifter to get the
     // bytes out the port.
     //
-    while(!(HWREG(UART0_BASE + UART_O_FR) & UART_FR_TXFE))
+    while(!(HWREG(UARTx_BASE + UART_O_FR) & UART_FR_TXFE))
     {
     }
 
     //
     // Wait for the FIFO to not be busy so that the shifter completes.
     //
-    while((HWREG(UART0_BASE + UART_O_FR) & UART_FR_BUSY))
+    while((HWREG(UARTx_BASE + UART_O_FR) & UART_FR_BUSY))
     {
     }
 }
@@ -136,14 +136,14 @@ UARTReceive(uint8_t *pui8Data, uint32_t ui32Size)
         //
         // Wait for the FIFO to not be empty.
         //
-        while((HWREG(UART0_BASE + UART_O_FR) & UART_FR_RXFE))
+        while((HWREG(UARTx_BASE + UART_O_FR) & UART_FR_RXFE))
         {
         }
 
         //
         // Receive a byte from the UART.
         //
-        *pui8Data++ = HWREG(UART0_BASE + UART_O_DR);
+        *pui8Data++ = HWREG(UARTx_BASE + UART_O_DR);
     }
 }
 

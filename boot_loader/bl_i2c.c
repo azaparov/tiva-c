@@ -3,7 +3,7 @@
 // bl_i2c.c - This file contains the function used to transfer data via the I2C
 //            port.
 //
-// Copyright (c) 2006-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2006-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -19,7 +19,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -68,14 +68,14 @@ I2CSend(const uint8_t *pui8Data, uint32_t ui32Size)
         //
         // Wait for request to come in at slave.
         //
-        while(!(HWREG(I2C0_BASE + I2C_O_SCSR) & I2C_SCSR_TREQ))
+        while(!(HWREG(I2Cx_BASE + I2C_O_SCSR) & I2C_SCSR_TREQ))
         {
         }
 
         //
         // Send out the next byte.
         //
-        HWREG(I2C0_BASE + I2C_O_SDR) = *pui8Data++;
+        HWREG(I2Cx_BASE + I2C_O_SDR) = *pui8Data++;
     }
 }
 
@@ -96,7 +96,7 @@ I2CFlush(void)
     // Wait until the I2C bus is no longer busy, meaning that the last byte has
     // been sent.
     //
-    while(HWREG(I2C0_BASE + I2C_O_MCS) & I2C_MCS_BUSBSY)
+    while(HWREG(I2Cx_BASE + I2C_O_MCS) & I2C_MCS_BUSBSY)
     {
     }
 }
@@ -129,14 +129,14 @@ I2CReceive(uint8_t *pui8Data, uint32_t ui32Size)
         //
         // Wait until the slave has received the character.
         //
-        while(!(HWREG(I2C0_BASE + I2C_O_SCSR) & I2C_SCSR_RREQ))
+        while(!(HWREG(I2Cx_BASE + I2C_O_SCSR) & I2C_SCSR_RREQ))
         {
         }
 
         //
         // Receive a byte from the I2C.
         //
-        *pui8Data++ = HWREG(I2C0_BASE + I2C_O_SDR);
+        *pui8Data++ = HWREG(I2Cx_BASE + I2C_O_SDR);
     }
 }
 

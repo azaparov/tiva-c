@@ -68,15 +68,22 @@ enum ExositeStatusCodes
 #define EXOSITE_SN_MAXLENGTH                     EXOSITE_HAL_SN_MAXLENGTH
 #define EXOSITE_DEMO_UPDATE_INTERVAL            4000// ms
 #define CIK_LENGTH                              40
+#define EXOSITE_PID_LENGTH                      20
 
 // functions for export
 int Exosite_Write(char * pbuf, unsigned int bufsize);
 int Exosite_Read(char * palias, char * pbuf, unsigned int buflen);
-int Exosite_Init(const char *vendor, const char *model, const unsigned char if_nbr, int reset);
+int Exosite_Init(const unsigned char if_nbr, int reset);
 int Exosite_Activate(void);
 void Exosite_SetCIK(char * pCIK);
 int Exosite_GetCIK(char * pCIK);
+void Exosite_SetPID(char * pPID);
+int Exosite_GetPID(char * pPID);
 int Exosite_StatusCode(void);
 int Exosite_GetResponse(void);
+
+extern char g_pcExositeAddr[70];
+
 #endif
+
 

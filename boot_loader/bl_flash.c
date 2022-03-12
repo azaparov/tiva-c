@@ -2,7 +2,7 @@
 //
 // bl_flash.c - Flash programming functions used by the boot loader.
 //
-// Copyright (c) 2006-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2006-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -115,7 +115,13 @@ BLInternalFlashProgram(uint32_t ui32DstAddr, uint8_t *pui8SrcData,
 uint32_t
 BLInternalFlashSizeGet(void)
 {
-    return(((HWREG(SYSCTL_DC0) & SYSCTL_DC0_FLASHSZ_M) + 1) << 11);
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+    defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
+    return(((HWREG(FLASH_PP) & FLASH_PP_SIZE_M) + 1) << 11);
+#else
+    return(((HWREG(FLASH_FSIZE) & FLASH_FSIZE_SIZE_M) + 1) << 11);
+#endif
 }
 
 //*****************************************************************************
@@ -136,7 +142,13 @@ BLInternalFlashStartAddrCheck(uint32_t ui32Addr, uint32_t ui32ImgSize)
     //
     // Determine the size of the flash available on the part in use.
     //
-    ui32FlashSize = ((HWREG(SYSCTL_DC0) & SYSCTL_DC0_FLASHSZ_M) + 1) << 11;
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+    defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
+    ui32FlashSize = ((HWREG(FLASH_PP) & FLASH_PP_SIZE_M) + 1) << 11;
+#else
+    ui32FlashSize = ((HWREG(FLASH_FSIZE) & FLASH_FSIZE_SIZE_M) + 1) << 11;
+#endif
 
     //
     // If we are reserving space at the top of flash then this space is not

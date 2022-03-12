@@ -2,7 +2,7 @@
 //
 // usbenum.c - Enumeration code to handle all endpoint zero traffic.
 //
-// Copyright (c) 2007-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2007-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva USB Library.
+// This is part of revision 2.2.0.295 of the Tiva USB Library.
 //
 //*****************************************************************************
 
@@ -373,7 +373,14 @@ USBDCDInit(uint32_t ui32Index, tDeviceInfo *psDevice, void *pvDCDCBData)
         //
         // Set the PLL to USB clock divider.
         //
-        USBClockEnable(USB0_BASE, g_ui32PLLDiv, USB_CLOCK_INTERNAL);
+        if(g_ui32PLLDiv == 0)
+        {
+            USBClockEnable(USB0_BASE, g_ui32PLLDiv, USB_CLOCK_EXTERNAL);
+        }
+        else
+        {
+            USBClockEnable(USB0_BASE, g_ui32PLLDiv, USB_CLOCK_INTERNAL);
+        }
 
         //
         // Configure ULPI support.
@@ -870,6 +877,55 @@ USBDCDFeatureSet(uint32_t ui32Index, uint32_t ui32Feature, void *pvFeature)
         {
             bRetCode = false;
             break;
+        }
+    }
+    return(bRetCode);
+}
+
+//*****************************************************************************
+//
+//! This function is used to get the features of the USB library.
+//!
+//! \param ui32Index is the index of the USB controller whose device power
+//! status is being reported.
+//! \param ui32Feature indicates which feature is being requested.
+//! \param pvFeature holds the data that will be reported for the feature
+//! request.
+//!
+//! Applications can query the support levels of some USB library features by
+//! calling this function to get values of the features.  This function
+//! should normally be called before class initialization functions since the
+//! settings need to be in place during enumeration.  This allows the
+//! USB library to properly respond to all enumeration requests. The
+//! \e ui32Feature value is one of the \b USBLIB_FEATURE_* defines which
+//! controls the type of request being made.  The \e pvFeature is a feature
+//! specific data structure that is determined by the value passed in the
+//! \e ui32Feature parameter.
+//!
+//! \return Returns \b true if the feature was requested for ULPI and returns
+//! \b false if the feature was not for ULPI interface.
+//
+//*****************************************************************************
+bool
+USBDCDFeatureGet(uint32_t ui32Index, uint32_t ui32Feature, void *pvFeature)
+{
+    bool bRetCode = true;
+
+    switch (ui32Feature)
+    {
+        case USBLIB_FEATURE_USBULPI:
+        {
+            //
+            // Save the ULPI support level.
+            //
+            *(uint32_t *)pvFeature = g_ui32ULPISupport;
+            
+            break;
+        }
+        default:
+        {
+             bRetCode = false;
+             break;
         }
     }
     return(bRetCode);

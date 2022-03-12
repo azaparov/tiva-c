@@ -2,7 +2,7 @@
 //
 // bl_usb.c - Functions to transfer data via the USB port.
 //
-// Copyright (c) 2009-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2009-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -78,13 +78,13 @@
 // operation.
 //
 //*****************************************************************************
-#if CRYSTAL_FREQ != 4000000 &&                                                \
-    CRYSTAL_FREQ != 5000000 &&                                                \
+#if CRYSTAL_FREQ != 5000000 &&                                                \
     CRYSTAL_FREQ != 6000000 &&                                                \
     CRYSTAL_FREQ != 8000000 &&                                                \
     CRYSTAL_FREQ != 10000000 &&                                               \
     CRYSTAL_FREQ != 12000000 &&                                               \
-    CRYSTAL_FREQ != 16000000
+    CRYSTAL_FREQ != 16000000 &&                                               \
+    CRYSTAL_FREQ != 25000000
 #error ERROR: Invalid CRYSTAL_FREQ specified for USB update!
 #endif
 
@@ -2010,7 +2010,7 @@ SetUSBMux(void)
     //
     // Enable the GPIO peripheral that contains the mux control pin.
     //
-    HWREG(SYSCTL_RCGC2) |= USB_MUX_PERIPH;
+    HWREG(SYSCTL_RCGCGPIO) |= USB_MUX_PERIPH;
 
     //
     // Delay a very short period before we access the newly-enabled peripheral.
@@ -2068,6 +2068,82 @@ SetUSBMux(void)
 void
 ConfigureUSB(void)
 {
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+    defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
+    //
+    // Since the crystal frequency was specified, enable the main oscillator
+    // and clock the processor from it. Check for whether the Oscillator range
+    // has to be set and wait states need to be updated
+    //
+    if(CRYSTAL_FREQ >= 10000000)
+    {
+        HWREG(SYSCTL_MOSCCTL) |= (SYSCTL_MOSCCTL_OSCRNG);
+        HWREG(SYSCTL_MOSCCTL) &= ~(SYSCTL_MOSCCTL_PWRDN |
+                                   SYSCTL_MOSCCTL_NOXTAL);
+    }
+    else
+    {
+        HWREG(SYSCTL_MOSCCTL) &= ~(SYSCTL_MOSCCTL_PWRDN |
+                                   SYSCTL_MOSCCTL_NOXTAL);
+    }
+
+    //
+    // Wait for the Oscillator to Stabilize
+    //
+    Delay(524288);
+
+    if(CRYSTAL_FREQ > 16000000)
+    {
+        HWREG(SYSCTL_MEMTIM0)  = (SYSCTL_MEMTIM0_FBCHT_1_5 |
+                                  (1 << SYSCTL_MEMTIM0_FWS_S) |
+                                  SYSCTL_MEMTIM0_EBCHT_1_5 |
+                                  (1 << SYSCTL_MEMTIM0_EWS_S) |
+                                  SYSCTL_MEMTIM0_MB1);
+        HWREG(SYSCTL_RSCLKCFG) = (SYSCTL_RSCLKCFG_MEMTIMU |
+                                  SYSCTL_RSCLKCFG_PLLSRC_MOSC |
+                                  SYSCTL_RSCLKCFG_OSCSRC_MOSC);
+    }
+    else
+    {
+        HWREG(SYSCTL_RSCLKCFG) = (SYSCTL_RSCLKCFG_PLLSRC_MOSC |
+                                  SYSCTL_RSCLKCFG_OSCSRC_MOSC);
+    }
+
+    //
+    // Program the PLLFREQ0 and PLLFREQ1 registers for 480MHz
+    // VCO Clock from the PLL and output clock of 240MHz using the Q divider.
+    // Enable the PLL Power Up.
+    //
+    HWREG(SYSCTL_PLLFREQ1) = (1 << SYSCTL_PLLFREQ1_Q_S |
+                              4 << SYSCTL_PLLFREQ1_N_S);
+    HWREG(SYSCTL_PLLFREQ0) = (SYSCTL_PLLFREQ0_PLLPWR |
+                              (96 << SYSCTL_PLLFREQ0_MINT_S));
+
+    //
+    // Wait for the PLL to Lock
+    //
+    while((HWREG(SYSCTL_PLLSTAT) & SYSCTL_PLLSTAT_LOCK) != SYSCTL_PLLSTAT_LOCK)
+    {
+    }
+
+    //
+    // Program the MEMTIM0 for 120MHz System Clock
+    //
+    HWREG(SYSCTL_MEMTIM0)  = (SYSCTL_MEMTIM0_FBCHT_3_5 |
+                              (5 << SYSCTL_MEMTIM0_FWS_S) |
+                              SYSCTL_MEMTIM0_EBCHT_3_5 |
+                              (5 << SYSCTL_MEMTIM0_EWS_S) |
+                              SYSCTL_MEMTIM0_MB1);
+
+    //
+    // Program the RSCLKCFG to switch to the PLL
+    // with System Clock as 120MHz
+    //
+    HWREG(SYSCTL_RSCLKCFG) |= (SYSCTL_RSCLKCFG_MEMTIMU |
+                               SYSCTL_RSCLKCFG_USEPLL |
+                               0x1);
+#else
     //
     // Enable the main oscillator.
     //
@@ -2098,8 +2174,9 @@ ConfigureUSB(void)
     //
     HWREG(SYSCTL_RCC) = ((HWREG(SYSCTL_RCC) & ~(SYSCTL_RCC_BYPASS |
                          SYSCTL_RCC_SYSDIV_M)) |
-                         ((8 - 1) << SYSCTL_RCC_SYSDIV_S) |
+                         ((7 - 1) << SYSCTL_RCC_SYSDIV_S) |
                          SYSCTL_RCC_USESYSDIV);
+#endif
 
     //
     // If the target device has a mux to allow selection of USB host or
@@ -2132,11 +2209,113 @@ ConfigureUSB(void)
 void
 AppUpdaterUSB(void)
 {
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+    defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
     //
-    // Set sysdiv to 8.  This yields a system clock of 25MHz.
+    // Since the crystal frequency was specified, enable the main oscillator
+    // and clock the processor from it. Check for whether the Oscillator range
+    // has to be set and wait states need to be updated
     //
-    HWREG(SYSCTL_RCC) = ((HWREG(SYSCTL_RCC) & ~(SYSCTL_RCC_SYSDIV_M)) |
-                         ((8 - 1) << SYSCTL_RCC_SYSDIV_S));
+    if(CRYSTAL_FREQ >= 10000000)
+    {
+        HWREG(SYSCTL_MOSCCTL) |= (SYSCTL_MOSCCTL_OSCRNG);
+        HWREG(SYSCTL_MOSCCTL) &= ~(SYSCTL_MOSCCTL_PWRDN |
+                                   SYSCTL_MOSCCTL_NOXTAL);
+    }
+    else
+    {
+        HWREG(SYSCTL_MOSCCTL) &= ~(SYSCTL_MOSCCTL_PWRDN |
+                                   SYSCTL_MOSCCTL_NOXTAL);
+    }
+
+    //
+    // Wait for the Oscillator to Stabilize
+    //
+    Delay(524288);
+
+    if(CRYSTAL_FREQ > 16000000)
+    {
+        HWREG(SYSCTL_MEMTIM0)  = (SYSCTL_MEMTIM0_FBCHT_1_5 |
+                                  (1 << SYSCTL_MEMTIM0_FWS_S) |
+                                  SYSCTL_MEMTIM0_EBCHT_1_5 | 
+                                  (1 << SYSCTL_MEMTIM0_EWS_S) |
+                                  SYSCTL_MEMTIM0_MB1);
+        HWREG(SYSCTL_RSCLKCFG) = (SYSCTL_RSCLKCFG_MEMTIMU |
+                                  SYSCTL_RSCLKCFG_PLLSRC_MOSC |
+                                  SYSCTL_RSCLKCFG_OSCSRC_MOSC);
+    }
+    else
+    {
+        HWREG(SYSCTL_RSCLKCFG) = (SYSCTL_RSCLKCFG_PLLSRC_MOSC |
+                                  SYSCTL_RSCLKCFG_OSCSRC_MOSC);
+    }
+
+    //
+    // Program the PLLFREQ0 and PLLFREQ1 registers for 480MHz
+    // VCO Clock from the PLL. Enable the PLL Power Up.
+    //
+    HWREG(SYSCTL_PLLFREQ1) = (PLL_N_TO_REG << SYSCTL_PLLFREQ1_N_S);
+    HWREG(SYSCTL_PLLFREQ0) = (SYSCTL_PLLFREQ0_PLLPWR |
+                              (PLL_M_TO_REG << SYSCTL_PLLFREQ0_MINT_S));
+
+    //
+    // Wait for the PLL to Lock
+    //
+    while((HWREG(SYSCTL_PLLSTAT) & SYSCTL_PLLSTAT_LOCK) != SYSCTL_PLLSTAT_LOCK)
+    {
+    }
+
+    //
+    // Program the MEMTIM0 for 120MHz System Clock
+    //
+    HWREG(SYSCTL_MEMTIM0)  = (SYSCTL_MEMTIM0_FBCHT_3_5 |
+                              (5 << SYSCTL_MEMTIM0_FWS_S) |
+                              SYSCTL_MEMTIM0_EBCHT_3_5 |
+                              (5 << SYSCTL_MEMTIM0_EWS_S) |
+                              SYSCTL_MEMTIM0_MB1);
+
+    //
+    // Program the RSCLKCFG to switch to the PLL
+    // with System Clock as 120MHz
+    //
+    HWREG(SYSCTL_RSCLKCFG) |= (SYSCTL_RSCLKCFG_MEMTIMU |
+                               SYSCTL_RSCLKCFG_USEPLL |
+                               0x3);
+#else
+    //
+    // Enable the main oscillator.
+    //
+    HWREG(SYSCTL_RCC) &= ~(SYSCTL_RCC_MOSCDIS);
+
+    //
+    // Delay while the main oscillator starts up.
+    //
+    Delay(524288);
+
+    //
+    // Set the crystal frequency, switch to the main oscillator, and enable the
+    // PLL.
+    //
+    HWREG(SYSCTL_RCC) = ((HWREG(SYSCTL_RCC) &
+                          ~(SYSCTL_RCC_PWRDN | SYSCTL_RCC_XTAL_M |
+                            SYSCTL_RCC_OSCSRC_M)) |
+                         XTAL_VALUE | SYSCTL_RCC_OSCSRC_MAIN);
+
+    //
+    // Delay while the PLL locks.
+    //
+    Delay(524288);
+
+    //
+    // Disable the PLL bypass so that the part is clocked from the PLL, and set
+    // sysdiv to 7.  This yields a system clock of 28MHz.
+    //
+    HWREG(SYSCTL_RCC) = ((HWREG(SYSCTL_RCC) & ~(SYSCTL_RCC_BYPASS |
+                         SYSCTL_RCC_SYSDIV_M)) |
+                         ((7 - 1) << SYSCTL_RCC_SYSDIV_S) |
+                         SYSCTL_RCC_USESYSDIV);
+#endif
 
     //
     // If the target device has a mux to allow selection of USB host or

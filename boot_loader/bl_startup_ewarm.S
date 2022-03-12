@@ -2,7 +2,7 @@
 //
 // bl_startup_ewarm.S - Startup code for EWARM.
 //
-// Copyright (c) 2007-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2007-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -129,6 +129,21 @@ __vector_table
     dcd     IntDefaultHandler               // Offset CC: Timer 3 subtimer A
     dcd     IntDefaultHandler               // Offset D0: Timer 3 subtimer B
     dcd     IntDefaultHandler               // Offset D4: I2C1 Master and Slave
+#if (defined(TARGET_IS_TM4C129_RA0) || defined(TARGET_IS_TM4C129_RA1) ||      \
+     defined(TARGET_IS_TM4C129_RA2))
+    dcd     IntDefaultHandler               // Offset D8: CAN0
+    dcd     IntDefaultHandler               // Offset DC: CAN1
+    dcd     IntDefaultHandler               // Offset E0: Ethernet
+    dcd     IntDefaultHandler               // Offset E4: Hibernation module
+#if defined(USB_ENABLE_UPDATE)
+    import  USB0DeviceIntHandler
+    dcd     USB0DeviceIntHandler            // Offset E8: USB 0 Controller
+#else
+    dcd     IntDefaultHandler               // Offset E8: USB 0 Controller
+#endif
+    dcd     IntDefaultHandler               // Offset EC: PWM Generator 3
+    dcd     IntDefaultHandler               // Offset F0: uDMA 0 Software
+#else
     dcd     IntDefaultHandler               // Offset D8: Quadrature Encoder 1
     dcd     IntDefaultHandler               // Offset DC: CAN0
     dcd     IntDefaultHandler               // Offset E0: CAN1
@@ -140,6 +155,7 @@ __vector_table
     dcd     USB0DeviceIntHandler            // Offset F0: USB 0 Controller
 #else
     dcd     IntDefaultHandler               // Offset F0: USB 0 Controller
+#endif
 #endif
 #endif
 
@@ -301,9 +317,9 @@ CallApplication
     // Copy the application's vector table to the target address if necessary.
     // Note that incorrect boot loader configuration could cause this to
     // corrupt the code!  Setting VTABLE_START_ADDRESS to 0x20000000 (the start
-    // of SRAM) is safe since this will use the same memory that the boot loader
-    // already uses for its vector table.  Great care will have to be taken if
-    // other addresses are to be used.
+    // of SRAM) is safe since this will use the same memory that the boot
+    // loader already uses for its vector table.  Great care will have to be
+    // taken if other addresses are to be used.
     //
 #if (APP_START_ADDRESS != VTABLE_START_ADDRESS)
     movw    r0, #(VTABLE_START_ADDRESS & 0xffff)
@@ -488,9 +504,9 @@ EnterApplication:
     // Copy the application's vector table to the target address if necessary.
     // Note that incorrect boot loader configuration could cause this to
     // corrupt the code!  Setting VTABLE_START_ADDRESS to 0x20000000 (the start
-    // of SRAM) is safe since this will use the same memory that the boot loader
-    // already uses for its vector table.  Great care will have to be taken if
-    // other addresses are to be used.
+    // of SRAM) is safe since this will use the same memory that the boot
+    // loader already uses for its vector table.  Great care will have to be
+    // taken if other addresses are to be used.
     //
 #if (APP_START_ADDRESS != VTABLE_START_ADDRESS)
     movw    r0, #(VTABLE_START_ADDRESS & 0xffff)

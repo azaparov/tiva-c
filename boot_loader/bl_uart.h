@@ -2,7 +2,7 @@
 //
 // bl_uart.h - Definitions for the UART transport functions.
 //
-// Copyright (c) 2006-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2006-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,12 +18,70 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
 #ifndef __BL_UART_H__
 #define __BL_UART_H__
+
+//*****************************************************************************
+//
+// This section maps the defines to default for UART Boot Loader for legacy
+// projects
+//
+//*****************************************************************************
+#ifndef UART_CLOCK_ENABLE
+#define UART_CLOCK_ENABLE       SYSCTL_RCGCUART_R0
+#endif
+
+#ifndef UARTx_BASE
+#define UARTx_BASE              UART0_BASE
+#endif
+
+#ifndef UART_RXPIN_CLOCK_ENABLE
+#define UART_RXPIN_CLOCK_ENABLE SYSCTL_RCGCGPIO_R0
+#endif
+
+#ifndef UART_RXPIN_BASE
+#define UART_RXPIN_BASE         GPIO_PORTA_BASE
+#endif
+
+#ifndef UART_RXPIN_PCTL
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+	defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
+#define UART_RXPIN_PCTL         0x1
+#else
+#define UART_RXPIN_PCTL         0x1
+#endif
+#endif
+
+#ifndef UART_RXPIN_POS
+#define UART_RXPIN_POS          0
+#endif
+
+#ifndef UART_TXPIN_CLOCK_ENABLE
+#define UART_TXPIN_CLOCK_ENABLE SYSCTL_RCGCGPIO_R0
+#endif
+
+#ifndef UART_TXPIN_BASE
+#define UART_TXPIN_BASE         GPIO_PORTA_BASE
+#endif
+
+#ifndef UART_TXPIN_PCTL
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+	defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
+#define UART_TXPIN_PCTL         0x1
+#else
+#define UART_TXPIN_PCTL         0x1
+#endif
+#endif
+
+#ifndef UART_TXPIN_POS
+#define UART_TXPIN_POS          1
+#endif
 
 //*****************************************************************************
 //
@@ -40,22 +98,16 @@
 // This defines the UART receive pin that is being used by the boot loader.
 //
 //*****************************************************************************
-#define UART_RX                 (1 << 0)
+#define UART_RX                 (1 << UART_RXPIN_POS)
+#define UART_RX_PCTL            (UART_RXPIN_PCTL << (4 * UART_RXPIN_POS))
 
 //*****************************************************************************
 //
 // This defines the UART transmit pin that is being used by the boot loader.
 //
 //*****************************************************************************
-#define UART_TX                 (1 << 1)
-
-//*****************************************************************************
-//
-// This defines the combination of pins used to implement the UART port used by
-// the boot loader.
-//
-//*****************************************************************************
-#define UART_PINS               (UART_RX | UART_TX)
+#define UART_TX                 (1 << UART_TXPIN_POS)
+#define UART_TX_PCTL            (UART_TXPIN_PCTL << (4 * UART_TXPIN_POS))
 
 //*****************************************************************************
 //

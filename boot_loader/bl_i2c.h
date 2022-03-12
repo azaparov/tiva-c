@@ -2,7 +2,7 @@
 //
 // bl_i2c.h - Definitions for the I2C transport functions.
 //
-// Copyright (c) 2006-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2006-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -27,25 +27,77 @@
 
 //*****************************************************************************
 //
+// This section maps the defines to default for I2C Boot Loader for legacy
+// projects
+//
+//*****************************************************************************
+#ifndef I2C_CLOCK_ENABLE
+#define I2C_CLOCK_ENABLE        SYSCTL_RCGCI2C_R0
+#endif
+
+#ifndef I2Cx_BASE
+#define I2Cx_BASE               I2C0_BASE
+#endif
+
+#ifndef I2C_SCLPIN_CLOCK_ENABLE
+#define I2C_SCLPIN_CLOCK_ENABLE SYSCTL_RCGCGPIO_R1
+#endif
+
+#ifndef I2C_SCLPIN_BASE
+#define I2C_SCLPIN_BASE         GPIO_PORTB_BASE
+#endif
+
+#ifndef I2C_SCLPIN_PCTL
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+    defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
+#define I2C_SCLPIN_PCTL         0x2
+#else
+#define I2C_SCLPIN_PCTL         0x3
+#endif
+#endif
+
+#ifndef I2C_SCLPIN_POS
+#define I2C_SCLPIN_POS          2
+#endif
+
+#ifndef I2C_SDAPIN_CLOCK_ENABLE
+#define I2C_SDAPIN_CLOCK_ENABLE SYSCTL_RCGCGPIO_R1
+#endif
+
+#ifndef I2C_SDAPIN_BASE
+#define I2C_SDAPIN_BASE         GPIO_PORTB_BASE
+#endif
+
+#ifndef I2C_SDAPIN_PCTL
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+    defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
+#define I2C_SDAPIN_PCTL         0x2
+#else
+#define I2C_SDAPIN_PCTL         0x3
+#endif
+#endif
+
+#ifndef I2C_SDAPIN_POS
+#define I2C_SDAPIN_POS          3
+#endif
+
+//*****************************************************************************
+//
 // This defines the I2C clock pin that is being used by the boot loader.
 //
 //*****************************************************************************
-#define I2C_CLK                 (1 << 2)
+#define I2C_CLK                 (1 << I2C_SCLPIN_POS)
+#define I2C_CLK_PCTL            (I2C_SCLPIN_PCTL << (4 * I2C_SCLPIN_POS))
 
 //*****************************************************************************
 //
 // This defines the I2C data pin that is being used by the boot loader.
 //
 //*****************************************************************************
-#define I2C_DATA                (1 << 3)
-
-//*****************************************************************************
-//
-// This defines the combination of pins used to implement the I2C port used by
-// the boot loader.
-//
-//*****************************************************************************
-#define I2C_PINS                (I2C_CLK | I2C_DATA)
+#define I2C_DATA                (1 << I2C_SDAPIN_POS)
+#define I2C_DATA_PCTL           (I2C_SDAPIN_PCTL << (4 * I2C_SDAPIN_POS))
 
 //*****************************************************************************
 //

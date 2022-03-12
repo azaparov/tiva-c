@@ -46,6 +46,9 @@ RM		= rm -f
 RMDIR		= rm -rf
 SHELL		= /bin/sh
 STRIP		= strip
+# ##### TIVA-BEGIN #####
+RC		= @RC@
+# ##### TIVA-END #####
 
 # compiler names:
 CXX		= @CXX@

@@ -2,7 +2,7 @@
 //
 // bl_link.icf - Linker script for EW-ARM.
 //
-// Copyright (c) 2007-2014 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2007-2020 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.1.0.12573 of the Tiva Firmware Development Package.
+// This is part of revision 2.2.0.295 of the Tiva Firmware Development Package.
 //
 //*****************************************************************************
 
@@ -57,6 +57,14 @@ keep { section INTVEC_init };
 // initialization code, causing the processor to branch to zero and fault.
 //
 do not initialize { section .noinit };
+
+//
+// Indicate that the bss values should be left alone.  This is required with
+// newer versions of EWARM, without which, a compilation error is generated
+// about a missing reference to the function that initializes the bss section.
+// Note that the bootloader already initializes the bss section.
+//
+do not initialize { section .bss };
 
 //
 // Place the interrupt vectors at the start of flash/SRAM.

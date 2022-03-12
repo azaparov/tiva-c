@@ -43,6 +43,8 @@
 #define META_PAD1_SIZE            4
 #define META_RSVD_SIZE            48          // TODO - flash block size is 128 - either make MFR these 48 RSVD bytes or instrument flash routine to use next block for MFR
 #define META_MFR_SIZE             128
+#define META_PID_SIZE             20
+
 typedef struct {
     char cik[META_CIK_SIZE];                   // our client interface key
     char server[META_SERVER_SIZE];             // ip address of m2.exosite.com (not using DNS at this stage)
@@ -52,6 +54,8 @@ typedef struct {
     char pad1[META_PAD1_SIZE];                 // pad 'uuid' to 16 bytes
     char rsvd[META_RSVD_SIZE];                 // reserved space - pad to ensure mfr is at end of RDK_META_SIZE
     char mfr[META_MFR_SIZE];                   // manufacturer data structure
+    char pid[META_PID_SIZE];                   // PID data structure
+
 } exosite_meta;
 
 #define EXOMARK "exosite!"
@@ -63,6 +67,7 @@ typedef enum
     META_MARK,
     META_UUID,
     META_MFR,
+	META_PID,
     META_NONE
 } MetaElements;
 
@@ -73,4 +78,5 @@ void exosite_meta_write(unsigned char * write_buffer, unsigned short srcBytes, u
 void exosite_meta_read(unsigned char * read_buffer, unsigned short destBytes, unsigned char element);
 
 #endif
+
 
